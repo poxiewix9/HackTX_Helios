@@ -87,7 +87,7 @@ from arco_schemas.vision import (
     TileGeoref,
 )
 
-SCHEMA_VERSION = "0.2.0"
+SCHEMA_VERSION = "0.2.1"
 
 __all__ = [
     "HAZARD_CLASSES",

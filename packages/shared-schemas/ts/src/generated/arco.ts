@@ -1,7 +1,7 @@
 /* eslint-disable */
 /**
  * GENERATED FILE - DO NOT EDIT.
- * Source: packages/shared-schemas/schema/arco.schema.json (schema version 0.2.0)
+ * Source: packages/shared-schemas/schema/arco.schema.json (schema version 0.2.1)
  * Regenerate with `make schemas`.
  */
 
@@ -313,6 +313,10 @@ export interface RoadEdge {
    * People per minute the edge can carry before congestion
    */
   capacity_estimate: number;
+  /**
+   * Cartographer-applied reduction for crowd bottlenecks; effective capacity = capacity_estimate x capacity_factor
+   */
+  capacity_factor?: number;
   /**
    * base_cost x penalties. Always finite; when status=severed the edge is excluded from routing regardless of cost
    */

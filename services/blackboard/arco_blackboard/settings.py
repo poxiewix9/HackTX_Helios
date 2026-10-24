@@ -17,6 +17,11 @@ class Settings(BaseSettings):
         default=None,
         description="redis://host:port/db. Unset or unreachable -> LISTEN/NOTIFY fallback.",
     )
+    arco_bus_prefix: str = Field(
+        default="blackboard.",
+        description="Redis Pub/Sub channel prefix. Pub/Sub is server-wide, so stacks sharing "
+        "one Redis must use distinct prefixes (tests use 'blackboard-test.').",
+    )
     blackboard_port: int = Field(default=8001, ge=1, le=65535)
     arco_log_level: str = "INFO"
     arco_log_json: bool = True

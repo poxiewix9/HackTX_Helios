@@ -6,7 +6,7 @@ Python workspace may import this directly; everything else goes through the API.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -231,6 +231,16 @@ def update_edge_states(
     if changed_ids:
         bump_graph_version(session)
     return list_edges(session, ids=changed_ids) if changed_ids else []
+
+
+def set_edge_capacity_factors(session: Session, factors: Mapping[int, float]) -> None:
+    """Cartographer sets effective-capacity factors (crowd bottlenecks). Callers pair this
+    with `update_edge_states` so the graph version bumps once."""
+    for edge_id, factor in factors.items():
+        session.execute(
+            update(RoadEdgeRow).where(RoadEdgeRow.id == edge_id).values(capacity_factor=factor)
+        )
+    session.flush()
 
 
 def set_edge_loads(session: Session, loads: dict[int, float]) -> None:

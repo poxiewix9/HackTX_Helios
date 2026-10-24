@@ -15,7 +15,7 @@ def test_alembic_script_dir_has_single_head() -> None:
     cfg = Config(str(ALEMBIC_INI))
     cfg.set_main_option("script_location", str(ALEMBIC_INI.parent / "alembic"))
     heads = ScriptDirectory.from_config(cfg).get_heads()
-    assert heads == ["0002"]
+    assert heads == ["0003"]
 
 
 @pytest.mark.integration
@@ -26,7 +26,7 @@ def test_upgrade_head_enables_extensions(engine: Engine) -> None:
     assert versions["pgrouting"] is not None
     with engine.connect() as conn:
         current = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert current == "0002"
+    assert current == "0003"
 
 
 @pytest.mark.integration

@@ -61,9 +61,16 @@ def sqlalchemy_url_to_psycopg(url: str) -> str:
 class Publisher:
     """Writes outbox + NOTIFY in the caller's session; mirrors to Redis after commit."""
 
-    def __init__(self, redis_client: redis.Redis | None, publisher_name: str) -> None:
+    def __init__(
+        self,
+        redis_client: redis.Redis | None,
+        publisher_name: str,
+        *,
+        channel_prefix: str = REDIS_PREFIX,
+    ) -> None:
         self._redis = redis_client
         self.publisher_name = publisher_name
+        self.channel_prefix = channel_prefix
 
     @property
     def redis_enabled(self) -> bool:
@@ -122,7 +129,7 @@ class Publisher:
         try:
             pipe = self._redis.pipeline(transaction=False)
             for env in envelopes:
-                pipe.publish(REDIS_PREFIX + env.topic, env.model_dump_json())
+                pipe.publish(self.channel_prefix + env.topic, env.model_dump_json())
             pipe.execute()
         except (redis.RedisError, OSError) as exc:  # Redis died mid-run: outbox still has it
             log.warning("redis publish failed; NOTIFY path still delivered", error=str(exc))
@@ -155,7 +162,7 @@ def make_publisher(
 ) -> Publisher:
     settings = settings or get_settings()
     client = connect_redis(settings.redis_url)
-    pub = Publisher(client, publisher_name)
+    pub = Publisher(client, publisher_name, channel_prefix=settings.arco_bus_prefix)
     log.info("event bus publisher ready", mode=pub.mode)
     return pub
 
@@ -245,12 +252,16 @@ class NotifySubscriber:
 
 
 class RedisSubscriber:
-    """PSUBSCRIBE `blackboard.*`; payloads are full envelopes."""
+    """PSUBSCRIBE `<prefix>*` (default `blackboard.*`); payloads are full envelopes.
+
+    Redis Pub/Sub is server-wide (not scoped by logical database), so the channel
+    prefix is the only isolation between stacks sharing one Redis (e.g. tests)."""
 
     name = "redis"
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, *, channel_prefix: str = REDIS_PREFIX) -> None:
         self._url = url
+        self._prefix = channel_prefix
         self._client: aioredis.Redis | None = None
         self._pubsub: Any = None
 
@@ -258,9 +269,9 @@ class RedisSubscriber:
         self._client = aioredis.Redis.from_url(self._url)
         self._pubsub = self._client.pubsub()
         if topics:
-            await self._pubsub.subscribe(*(REDIS_PREFIX + t for t in sorted(topics)))
+            await self._pubsub.subscribe(*(self._prefix + t for t in sorted(topics)))
         else:
-            await self._pubsub.psubscribe(REDIS_PREFIX + "*")
+            await self._pubsub.psubscribe(self._prefix + "*")
         while True:
             msg = await self._pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if msg is None:
@@ -287,5 +298,5 @@ def make_subscriber(settings: Settings | None = None, *, prefer: str | None = No
         probe = connect_redis(settings.redis_url)
         if probe is not None:
             probe.close()
-            return RedisSubscriber(settings.redis_url)
+            return RedisSubscriber(settings.redis_url, channel_prefix=settings.arco_bus_prefix)
     return NotifySubscriber(settings.database_url)

@@ -75,5 +75,22 @@ else
   fi
 fi
 
+echo "== agents api =="
+ag_port="${AGENTS_PORT:-8003}"
+if [[ "$(status agents)" == "" ]]; then
+  echo "  not running (optional; start with: docker compose up -d agents)"
+else
+  for _ in $(seq 1 30); do
+    [[ "$(status agents)" == "healthy" ]] && break
+    sleep 2
+  done
+  if body="$(curl -fsS "http://localhost:${ag_port}/health" 2>/dev/null)"; then
+    echo "  $body"
+    echo "$body" | grep -q '"status":"ok"' || { echo "  status not ok"; fail=1; }
+  else
+    echo "  GET /health failed on port ${ag_port}"; fail=1
+  fi
+fi
+
 if (( fail )); then echo "healthcheck: FAIL"; exit 1; fi
 echo "healthcheck: OK"

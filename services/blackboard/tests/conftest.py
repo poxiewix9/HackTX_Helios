@@ -5,27 +5,21 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from sqlalchemy import Engine, text
+from sqlalchemy import Engine
 
 from arco_blackboard.bus import Publisher, make_publisher
 from arco_blackboard.db import db_reachable, get_engine
 from arco_blackboard.migrate import upgrade_head
 from arco_blackboard.service import BlackboardService
 from arco_blackboard.settings import Settings, get_settings
+from arco_blackboard.testing import truncate_all, use_test_database
+
+# Tests truncate tables: run them in `<db>_test`, never in the dev database that the
+# running compose stack (and the live agents container) depend on.
+TEST_DATABASE_URL = use_test_database()
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SAMPLE_GRAPHML = REPO_ROOT / "data" / "samples" / "osm" / "lahaina_drive.graphml"
-
-TABLES = (
-    "edge_hazard_links",
-    "routes",
-    "hazards",
-    "road_edges",
-    "community_reports",
-    "safe_zones",
-    "agent_events",
-    "bus_outbox",
-)
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -60,9 +54,7 @@ def migrated(engine: Engine) -> None:
 @pytest.fixture
 def clean_db(engine: Engine, migrated: None) -> Iterator[Engine]:
     """Truncate every blackboard table before the test (keeps schema + graph_state)."""
-    with engine.begin() as conn:
-        conn.execute(text("TRUNCATE " + ", ".join(TABLES) + " RESTART IDENTITY CASCADE"))
-        conn.execute(text("UPDATE graph_state SET version = 0 WHERE id = 1"))
+    truncate_all(engine)
     yield engine
 
 

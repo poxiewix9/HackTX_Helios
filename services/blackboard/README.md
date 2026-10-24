@@ -18,6 +18,7 @@ service never defines its own wire types.
 | `api`                   | FastAPI REST + `/ws/blackboard` fan-out (`Broadcaster`, bounded per-client queues)    |
 | `ingest`                | OSMnx MultiDiGraph → `road_edges` rows; cost/capacity from `config/ingest.yaml`       |
 | `migrate`               | waits for DB, `alembic upgrade head`, verifies PostGIS + pgRouting                    |
+| `testing`               | shared test helpers: `use_test_database()` (isolated `<db>_test` + Redis prefix), `truncate_all`, `reset_edges`, `make_hazard`, `square` |
 
 ## Event bus semantics
 
@@ -32,6 +33,12 @@ service never defines its own wire types.
   `GET /events?since_seq=N` or `ws://…/ws/blackboard?since_seq=N`.
 - Topics = the part of `type` before the first dot: `hazard`, `edge`, `graph`, `report`,
   `safe_zone`, `agent`, `routes`.
+- Redis Pub/Sub is **server-wide** (not scoped by logical database); the channel prefix
+  (`ARCO_BUS_PREFIX`, default `blackboard.`) is what separates stacks sharing one Redis.
+  Tests use `blackboard-test.`.
+- Phase 3 additions (schema 0.2.1 / migration `0003`): `road_edges.capacity_factor`
+  (0,1], `apply_edge_updates(..., capacity_factors=)`, `links_for_hazard(id)`,
+  `links_for_edges(ids)` so the Cartographer can recompute an edge from all its links.
 
 ## REST (port `BLACKBOARD_PORT`, default 8001)
 
@@ -76,7 +83,9 @@ make test-blackboard-events               # 2.2 bus + REST + WS
 make test-blackboard-all                  # everything incl. ingestion
 ```
 
-Without `ARCO_REQUIRE_DB=1`, integration tests skip when the DB is unreachable.
+Without `ARCO_REQUIRE_DB=1`, integration tests skip when the DB is unreachable. Tests
+run in `<db>_test` (auto-created, migrated by the session fixture) with Redis prefix
+`blackboard-test.`, never in the dev database the compose stack uses.
 
 ## Config (env / .env)
 
@@ -86,3 +95,5 @@ Without `ARCO_REQUIRE_DB=1`, integration tests skip when the DB is unreachable.
 | `REDIS_URL`       | unset / unreachable → NOTIFY-only mode                           |
 | `BLACKBOARD_PORT` | `8001`                                                           |
 | `ARCO_LOG_JSON`   | `true`                                                           |
+| `ARCO_BUS_PREFIX` | `blackboard.` (Redis channel prefix)                             |
+| `ARCO_TEST_DATABASE_URL` / `ARCO_TEST_REDIS_URL` | tests only; default `<db>_test` / redis db 9 |

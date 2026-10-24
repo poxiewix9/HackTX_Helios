@@ -1,6 +1,6 @@
 [project]
 name = "arco-schemas"
-version = "0.2.0"
+version = "0.2.1"
 description = "ARCO shared contracts: Pydantic models, hazard taxonomy, JSON Schema export"
 requires-python = ">=3.11,<3.12"
 dependencies = [

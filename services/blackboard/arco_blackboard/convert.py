@@ -111,6 +111,7 @@ def edge_to_row(e: RoadEdge) -> RoadEdgeRow:
         status=e.status,
         capacity_estimate=e.capacity_estimate,
         current_load=e.current_load,
+        capacity_factor=e.capacity_factor,
         highway=e.highway,
         name=e.name,
     )
@@ -129,6 +130,7 @@ def row_to_edge(r: RoadEdgeRow) -> RoadEdge:
         status=r.status,  # type: ignore[arg-type]
         capacity_estimate=r.capacity_estimate,
         current_load=r.current_load,
+        capacity_factor=r.capacity_factor,
         highway=r.highway,
         name=r.name,
     )

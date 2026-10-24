@@ -75,6 +75,15 @@ class RoadEdge(_Entity):
         ge=0.0, description="People per minute the edge can carry before congestion"
     )
     current_load: float = Field(default=0.0, ge=0.0, description="Assigned people per minute")
+    capacity_factor: float = Field(
+        default=1.0,
+        gt=0.0,
+        le=1.0,
+        description=(
+            "Cartographer-applied reduction for crowd bottlenecks; effective capacity = "
+            "capacity_estimate x capacity_factor"
+        ),
+    )
     highway: str | None = Field(default=None, description="OSM highway tag")
     name: str | None = None
 

@@ -36,7 +36,7 @@ def _edge(edge_id: int, coords: list[list[float]], **kw: object) -> RoadEdge:
 def test_alembic_head_is_0002(clean_db: Engine) -> None:
     upgrade_head()
     with clean_db.connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0003"
 
 
 @pytest.mark.integration

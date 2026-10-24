@@ -82,6 +82,9 @@ class RoadEdgeRow(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     capacity_estimate: Mapped[float] = mapped_column(Float, nullable=False)
     current_load: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    capacity_factor: Mapped[float] = mapped_column(
+        Float, nullable=False, default=1.0, server_default="1.0"
+    )
     highway: Mapped[str | None] = mapped_column(String(32))
     name: Mapped[str | None] = mapped_column(String(256))
 

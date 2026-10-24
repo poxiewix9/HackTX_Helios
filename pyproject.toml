@@ -13,6 +13,7 @@ members = ["packages/shared-schemas", "services/*"]
 
 [tool.uv.sources]
 arco-schemas = { workspace = true }
+arco-blackboard = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -46,7 +47,7 @@ ignore = [
 "**/alembic/env.py" = ["ANN"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["arco_schemas", "arco_blackboard"]
+known-first-party = ["arco_schemas", "arco_blackboard", "arco_agents"]
 
 # ---------------------------------------------------------------------------
 # mypy: strict everywhere
@@ -57,11 +58,11 @@ strict = true
 warn_unreachable = true
 show_error_codes = true
 plugins = ["pydantic.mypy"]
-mypy_path = "packages/shared-schemas/python:services/blackboard"
+mypy_path = "packages/shared-schemas/python:services/blackboard:services/agents"
 exclude = ["alembic/versions/"]
 
 [[tool.mypy.overrides]]
-module = ["geoalchemy2.*", "redis.*", "osmnx.*", "networkx.*"]
+module = ["geoalchemy2.*", "redis.*", "osmnx.*", "networkx.*", "langgraph.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]
@@ -72,7 +73,7 @@ init_typed = true
 # pytest
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
-testpaths = ["packages/shared-schemas/tests", "services/blackboard/tests"]
+testpaths = ["packages/shared-schemas/tests", "services/blackboard/tests", "services/agents/tests"]
 markers = [
   "integration: requires docker-compose Postgres/Redis (skips if unreachable)",
 ]

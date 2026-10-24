@@ -17,9 +17,12 @@ WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY packages/shared-schemas/pyproject.toml packages/shared-schemas/pyproject.toml
 COPY services/blackboard/pyproject.toml services/blackboard/pyproject.toml
-RUN mkdir -p packages/shared-schemas/python/arco_schemas services/blackboard/arco_blackboard \
+COPY services/agents/pyproject.toml services/agents/pyproject.toml
+# uv needs every workspace member's manifest to resolve, even ones not installed here.
+RUN mkdir -p packages/shared-schemas/python/arco_schemas services/blackboard/arco_blackboard services/agents/arco_agents \
  && touch packages/shared-schemas/python/arco_schemas/__init__.py \
-          services/blackboard/arco_blackboard/__init__.py
+          services/blackboard/arco_blackboard/__init__.py \
+          services/agents/arco_agents/__init__.py
 RUN uv sync --frozen --no-dev --package arco-blackboard
 
 # Sources.

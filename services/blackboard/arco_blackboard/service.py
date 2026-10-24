@@ -4,7 +4,7 @@ agents. Vision, simulator and agents all go through this class (or its HTTP mirr
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -137,14 +137,18 @@ class BlackboardService:
         *,
         links: Iterable[EdgeHazardLink] = (),
         unlink_hazard_ids: Iterable[UUID] = (),
+        capacity_factors: Mapping[int, float] | None = None,
         scenario_t: float = NO_SCENARIO,
     ) -> tuple[EdgeEvent, GraphUpdatedEvent] | None:
-        """Cartographer entry point: change edge states, record links, publish
-        `edge.updated` + `graph.updated`. Returns None if nothing changed."""
+        """Cartographer entry point: change edge states (and optionally capacity
+        factors), record links, publish `edge.updated` + `graph.updated` in one
+        transaction. Returns None if nothing changed."""
         with session_scope(self.engine) as s:
             for hid in unlink_hazard_ids:
                 repo.delete_links_for_hazard(s, hid)
             repo.upsert_edge_hazard_links(s, links)
+            if capacity_factors:
+                repo.set_edge_capacity_factors(s, capacity_factors)
             changed = repo.update_edge_states(s, updates)
             if not changed:
                 return None
@@ -177,6 +181,14 @@ class BlackboardService:
         assert isinstance(edge_env.message, EdgeEvent)
         assert isinstance(graph_env.message, GraphUpdatedEvent)
         return edge_env.message, graph_env.message
+
+    def links_for_hazard(self, hazard_id: UUID) -> list[EdgeHazardLink]:
+        with session_scope(self.engine) as s:
+            return repo.links_for_hazard(s, hazard_id)
+
+    def links_for_edges(self, edge_ids: Sequence[int]) -> list[EdgeHazardLink]:
+        with session_scope(self.engine) as s:
+            return repo.links_for_edges(s, edge_ids)
 
     def set_edge_loads(self, loads: dict[int, float]) -> None:
         with session_scope(self.engine) as s:

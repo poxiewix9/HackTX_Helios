@@ -88,7 +88,7 @@ async def test_hazard_insert_is_observed_on_redis(
     if not service.publisher.redis_enabled:
         pytest.skip("Redis not reachable; NOTIFY-only mode (covered by the notify test)")
     assert settings.redis_url is not None
-    sub = bus.RedisSubscriber(settings.redis_url)
+    sub = bus.RedisSubscriber(settings.redis_url, channel_prefix=settings.arco_bus_prefix)
     task = asyncio.create_task(_collect(sub.events(topics={"hazard"}), 1, timeout=10))
     await asyncio.sleep(0.3)
     h = make_hazard(square(0, 0, 0.001))
