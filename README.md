@@ -39,6 +39,9 @@ make validate-scenarios # Phase 7 data/scenarios/*.json schema + referenced file
 make test-sim           # Phase 7 player tests + Lahaina run through the real agents in-process (needs DB)
 curl -s -X POST localhost:8004/speed -H 'content-type: application/json' -d '{"speed":60}'; curl -s -X POST localhost:8004/play
 make play-scenario SCENARIO=joplin_2011 SPEED=120   # headless CLI player + expected_blocked_edges check
+make dev-dashboard      # Phase 8 dashboard on :${DASHBOARD_PORT:-3000} (map, snap animation, 3D, telemetry, agent feed)
+make test-dashboard     # Phase 8 vitest (reducer, reconnect, replay, layers, components)
+make e2e-dashboard      # Phase 8 Playwright: live scenario + snap (needs the stack) and backend-killed recorded replay
 make schemas            # regenerate JSON Schema + TS types from Pydantic
 make schemas-check      # fail if generated files are stale
 ```
@@ -62,7 +65,8 @@ services/edge-capture/     ONNX split + INT8 head, feature-packet codec, frame s
 services/base-station/     tail inference, seg postprocess, class map, georef, hazard writer, telemetry API
 services/benchmark/        A-vs-B harness, pacing/drop model, HardwareInfo, recorded replay on :8005
 services/simulator/        scenario player (clock/seek/chaos), synthetic street feeds, arco-sim CLI on :8004
-apps/{dashboard,mobile}/   Next.js dashboard, Expo community app (later phases)
+apps/dashboard/            Next.js 15 ops dashboard: MapLibre + deck.gl + three.js, snap animation, telemetry, offline replay
+apps/mobile/               Expo community app (Phase 9)
 data/{scenarios,samples}/  Lahaina/Joplin/Camp Fire scenarios + OSM samples (ODbL) + vision georefs
 models/                    exported ONNX heads/tails + manifest.json (gitignored; make export-split)
 scripts/                   healthcheck, loop_check (agent hook), export_split.py, finetune.py

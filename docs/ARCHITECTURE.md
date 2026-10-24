@@ -133,8 +133,9 @@ Pydantic models (python/arco_schemas/*.py)
 | 4     | Split-inference vision: ONNX split + INT8 head, edge-capture, base-station (georef, telemetry, synthetic fallback) | **done** (see "Vision internals") |
 | 5     | Benchmark harness: A vs B on identical frames, JSON/CSV, hardware from the machine, recorded replay | **done** (see "Benchmark internals") |
 | 6     | Consensus agent: signed community reports, trust ledger, ST-DBSCAN, vision-negative override, disputes | **done** (see "Consensus internals") |
-| 7     | Simulator: scenario player (clock, seek, chaos), Lahaina / Joplin / Camp Fire scenarios on real OSM geometry, synthetic street feeds | **built, in review** (see "Simulator internals") |
-| 8-10  | see `PROJECT_SPEC.md` §8                | pending     |
+| 7     | Simulator: scenario player (clock, seek, chaos), Lahaina / Joplin / Camp Fire scenarios on real OSM geometry, synthetic street feeds | **done** (see "Simulator internals") |
+| 8     | Dashboard: MapLibre + deck.gl + three.js, snap animation, telemetry strip, agent reasoning, offline recorded replay | **built, in review** (see "Dashboard internals") |
+| 9-10  | see `PROJECT_SPEC.md` §8                | pending     |
 
 ## Blackboard internals (Phase 2)
 
@@ -368,6 +369,53 @@ Scenario JSON ─▶ Player ─┬─ timeline events ──▶ POST /hazards (u
   `routes.recomputed`, `community.hazard.created`, the cellular-down event and the final
   `clock.tick`.
 
+## Dashboard internals (Phase 8)
+
+`apps/dashboard` (`@arco/dashboard`) is a Next.js 15 App Router app. It has **no state of
+its own**: every pixel is derived from `@arco/schemas` messages received over the
+blackboard bus, plus a REST snapshot taken on connect.
+
+```
+ws://blackboard:8001/ws/blackboard ─┐
+ws://benchmark:8005/ws/telemetry   ─┼─▶ ReconnectingSocket ─▶ applyMessage(state, msg) ─▶ Zustand store
+ws://base-station:8002/ws/detections┘        (exp backoff + jitter,     (pure reducer,            │
+                                              state surfaced in UI)       unit-tested)             ▼
+/api/{bb,sim,agents,base,bench}/* ──▶ Next rewrites ──▶ services          MapView (MapLibre) ◀── buildLayers()
+                                                                              ├─ deck.gl MapboxOverlay (hazards, edges, routes, flow, pins)
+                                                                              └─ ThreeLayer (custom WebGL layer: volumes, crowd, beacons)
+```
+
+- **The backend clock is the only clock.** `clock.tick` from the simulator drives the
+  control bar, the scrub bar and the street-feed frame request (`displayClockT`
+  extrapolates between 2 Hz ticks only while `playing`, capped at one tick interval).
+  Only the offline `ReplayPlayer` runs its own clock, and only in replay mode.
+- **Snap animation** is data-driven: `routes.updated` with a newer `graph_version` sets
+  `snap = {at, latencyMs, trigger}`; `latencyMs` is measured as `routes.updated.ts` minus
+  the triggering `graph.updated.ts` (both backend timestamps, so it is the real
+  hazard→routes latency, not a client guess). Routes widen/brighten for 450 ms; severed
+  edges flash for 1.8 s from the `edge.severed` event.
+- **Three.js** is a MapLibre `CustomLayerInterface` sharing the map's GL context
+  (extruded hazard volumes, an `InstancedMesh` of crowd particles flowing along routes,
+  pulsing safe-zone beacons). FPS is measured inside `render()` over a 1 s window and
+  shown in the status bar; the e2e test records whatever it measured.
+- **Offline fallback**: if the blackboard socket is not open after
+  `NEXT_PUBLIC_OFFLINE_FALLBACK_MS`, the recorded file
+  `public/recorded/<scenario>.replay.json` (format `arco.replay/1`, produced by
+  `make record-replay` from a real run) is fed through the *same* reducer at 20×, the
+  mode badge turns `RECORDED REPLAY`, transport controls are disabled, and the sockets
+  keep retrying with a visible attempt counter. When the blackboard comes back the replay
+  stops and the live snapshot is reloaded.
+- **Honesty labels**: `SIMULATION_LABEL` from the schema package sits in the status bar;
+  the telemetry strip reads `LIVE`/`RECORDED` from the `telemetry.sample.mode` field of
+  each sample (never from the UI mode alone).
+- **Tests**: vitest (20) for the reducer, backoff/reconnect state machine, replay
+  ordering/looping, layer colour/width math and the components; Playwright (3) with two
+  dev servers — one against the compose stack (play Lahaina at 200×, assert
+  `hazard.applied` → snap count increases and the indicator passes firing → fired, the
+  clock advanced, telemetry badge, street-feed frame, measured FPS annotated), one with
+  every URL pointed at a dead port (`RECORDED REPLAY` badge, agent events and snaps from
+  the recording, controls disabled, reconnect counter climbing, no page errors).
+
 ## Limitations (honest list, kept current)
 
 - **Dispersal is static.** Frank–Wolfe over k candidate paths with BPR congestion is a
@@ -416,3 +464,16 @@ Scenario JSON ─▶ Player ─┬─ timeline events ──▶ POST /hazards (u
   that a real LAN would not.
 - **Telemetry `pipeline` has no `synthetic` kind** in the contract yet; synthetic runs are
   labelled through `detector` / `source` instead (contract change requested).
+- **Dashboard frame rate depends on the GPU.** The three.js layer measured ~120 fps in a
+  desktop Chromium on the dev laptop (9 volumes, 700 particles, 2 beacons) but ~1 fps in
+  headless Playwright under SwiftShader software GL; the e2e test records the number it
+  saw rather than asserting a target. Playwright tracing is off by default because trace
+  snapshots read the WebGL canvases back on every poll and stall the page.
+- **Three.js is a raw custom layer, not React Three Fiber.** R3F/drei are planned for the
+  Phase 9 mesh panel where a component tree pays off; the map layer needs the MapLibre GL
+  context and its projection matrix directly.
+- **Basemap tiles need internet.** OpenFreeMap vector style and ESRI imagery are fetched
+  live; the recorded replay works offline but the map background does not.
+- **Replay edges start open.** The recorded file normalises every edge to `open` at
+  scenario t=0 (documented in its `notes`) so the recording animates severs from a clean
+  graph even if it was captured mid-run.

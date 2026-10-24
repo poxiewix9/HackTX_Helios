@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "maplibre-gl/dist/maplibre-gl.css";
+@import "uplot/dist/uPlot.min.css";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: #07090d;
+  color: #d6dde8;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  overflow: hidden;
+}
+
+.panel {
+  @apply border border-ops-edge bg-ops-panel/90 backdrop-blur-sm;
+}
+
+.panel-title {
+  @apply flex items-center justify-between border-b border-ops-edge px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-ops-dim;
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(7, 9, 13, 0.7) !important;
+  color: #7b879a !important;
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib a {
+  color: #9aa6b8 !important;
+}
+
+.u-legend {
+  display: none;
+}

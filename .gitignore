@@ -14,6 +14,9 @@ htmlcov/
 node_modules/
 dist/
 .next/
+.next-*/
+apps/dashboard/playwright-report/
+apps/dashboard/test-results/
 out/
 coverage/
 *.tsbuildinfo

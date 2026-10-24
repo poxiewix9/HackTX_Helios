@@ -10,6 +10,9 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/dist/**",
       "**/.next/**",
+      "**/.next-*/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
       "**/coverage/**",
       "**/generated/**",
       ".venv/**",
@@ -34,6 +37,17 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
+    },
+  },
+  {
+    // Browser app: numbers/booleans in template strings are the normal way to render values.
+    files: ["apps/dashboard/**/*.{ts,tsx}"],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    rules: {
+      "@typescript-eslint/restrict-template-expressions": [
+        "error",
+        { allowNumber: true, allowBoolean: true },
       ],
     },
   },

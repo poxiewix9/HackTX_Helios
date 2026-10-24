@@ -1,6 +1,9 @@
 node_modules
 dist
 .next
+.next-*
+playwright-report
+test-results
 coverage
 .venv
 pnpm-lock.yaml

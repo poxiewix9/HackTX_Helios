@@ -190,6 +190,25 @@ render-feed: ## Render a synthetic street-camera clip: SCENARIO, CAMERA, OUT (mp
 	$(UV) run arco-sim render-feed --scenario $(or $(SCENARIO),lahaina_2023) --camera $(or $(CAMERA),cam-front-st) --out $(or $(OUT),data/cache/feed.mp4) --duration $(or $(DURATION),30)
 
 # ---------------------------------------------------------------------------
+# Dashboard (Phase 8)
+# ---------------------------------------------------------------------------
+.PHONY: dev-dashboard
+dev-dashboard: ## Next.js dev server on $$DASHBOARD_PORT (default 3000) against the host-side service ports
+	$(PNPM) --filter @arco/dashboard dev
+
+.PHONY: test-dashboard
+test-dashboard: ## 8.1 Dashboard unit tests (store reducer, reconnecting socket, replay player, layer math, components)
+	$(PNPM) --filter @arco/dashboard test
+
+.PHONY: e2e-dashboard
+e2e-dashboard: ## 8.2 Playwright: live scenario + snap animation (needs compose stack) and backend-killed recorded replay
+	$(PNPM) --filter @arco/dashboard e2e
+
+.PHONY: record-replay
+record-replay: ## Re-record the offline fallback (apps/dashboard/public/recorded/<id>.replay.json) from the running stack after `make play-scenario`
+	$(PNPM) --filter @arco/dashboard record-replay
+
+# ---------------------------------------------------------------------------
 # Agents service (host side)
 # ---------------------------------------------------------------------------
 .PHONY: serve-agents

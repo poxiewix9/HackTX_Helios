@@ -1,0 +1,51 @@
+{
+  "name": "@arco/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p ${DASHBOARD_PORT:-3000}",
+    "build": "next build",
+    "start": "next start -p ${DASHBOARD_PORT:-3000}",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "record-replay": "node scripts/record-replay.mjs"
+  },
+  "dependencies": {
+    "@arco/schemas": "workspace:*",
+    "@deck.gl/core": "^9.0.35",
+    "@deck.gl/extensions": "^9.0.35",
+    "@deck.gl/geo-layers": "^9.0.35",
+    "@deck.gl/layers": "^9.0.35",
+    "@deck.gl/mapbox": "^9.0.35",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "maplibre-gl": "^4.7.1",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0",
+    "three": "^0.171.0",
+    "uplot": "^1.6.31",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "@types/three": "^0.171.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.3",
+    "ws": "^8.18.0"
+  }
+}

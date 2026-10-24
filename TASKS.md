@@ -17,11 +17,11 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 | 4.2  | vision     | 4.1,2.2    | Edge capture + base station + georef          | `make test-vision-e2e`                            | DONE        | see log 4.2 |
 | 5.1  | benchmark  | 4.2        | FP32 vs split benchmark + recorded replay     | `make bench`                                      | DONE        | see log 5.1 |
 | 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | DONE        | see log 6.1 |
-| 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | IN_REVIEW   | see log 7.1 |
-| 7.2  | simulator  | 7.1        | Lahaina, Joplin, Camp Fire scenarios          | `make validate-scenarios`                         | IN_REVIEW   | see log 7.2 |
-| 8.1  | dashboard  | 1.2        | Dashboard shell against mock feed             | `pnpm --filter dashboard test`                    | TODO        |          |
-| 8.2  | dashboard  | 8.1,7.1    | Overlays, snap animation, Three.js layers     | `pnpm --filter dashboard e2e`                     | TODO        |          |
-| 8.3  | dashboard  | 5.1,8.2    | Telemetry strip + offline fallback            | `pnpm --filter dashboard e2e`                     | TODO        |          |
+| 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | DONE        | see log 7.1 |
+| 7.2  | simulator  | 7.1        | Lahaina, Joplin, Camp Fire scenarios          | `make validate-scenarios`                         | DONE        | see log 7.2 |
+| 8.1  | dashboard  | 1.2        | Dashboard shell against mock feed             | `make test-dashboard`                             | IN_REVIEW   | see log 8.x |
+| 8.2  | dashboard  | 8.1,7.1    | Overlays, snap animation, Three.js layers     | `make e2e-dashboard`                              | IN_REVIEW   | see log 8.x |
+| 8.3  | dashboard  | 5.1,8.2    | Telemetry strip + offline fallback            | `make e2e-dashboard`                              | IN_REVIEW   | see log 8.x |
 | 9.1  | mobile     | 1.2,6.1    | Arrow UI, CRDT, transports, simulated mesh    | `pnpm --filter mobile test`                       | TODO        |          |
 | 10.1 | agents     | 3.2        | SLM explanations + speculative decoding       | `make test-slm`                                   | TODO        |          |
 | 10.2 | integrator | all        | make demo end to end + final E2E              | `make demo-smoke`                                 | TODO        |          |
@@ -33,6 +33,8 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 - Phase 2 — 2026-10-24 — gate: `make lint`, `make test` (62 py + 14 ts), `make test-blackboard-all` (35), `docker compose up -d --wait && make healthcheck`, `make ingest-sample` all green; 2.1-2.3 DONE (user said "continue"). Commit `386e819`.
 - Phase 3 — 2026-10-24 — gate: `make lint`, `make test` (92 py + 14 ts), `make test-cartographer` (15), `make test-navigator` (15), `docker compose up -d --wait && make healthcheck`, live hazard → sever → reroute → `/ws/routes` verified; 3.1-3.2 DONE (user said "continue"). Commits `cea1819`, `ed2358c`.
 - Phase 4 — 2026-10-24 — gate: `make lint`, `make test` (127 py + 14 ts), `make test-split` (24), `make test-vision-e2e` (11), `make schemas-check`, `docker compose up -d --wait && make healthcheck` (base-station added), live edge → base → PostGIS → agents reroute verified; 4.1-4.2 DONE (user said "continue", and asked to run phases 5-10 in succession without further gates — Orchestrator applies the gate checks itself at each phase end). Commit `a152fd4`.
+
+- Phase 7 — 2026-10-24 — gate: `make lint`, `ARCO_REQUIRE_DB=1 make test` (159 py + 14 ts), `make validate-scenarios` (3/3), `make test-sim` (14), `docker compose up -d --build --wait blackboard agents simulator` healthy, Lahaina at 200× through the real agents: 210 severed, 40/40 expected edges, 3 routes, consensus 5 reports / 4 reporters; 7.1-7.2 DONE (Orchestrator gate, user asked for phases to run in succession). Commit `981762c`.
 
 ## Task logs
 (Agents append: iteration count, commands run, last output lines, root causes found.)
@@ -276,3 +278,28 @@ $ GET :8001/agent-events -> hazard.applied 137, routes.recomputed 149, community
 $ make healthcheck -> healthcheck: OK (postgres, redis, blackboard, base-station, benchmark, agents, simulator)
 ```
 Covers: scenario schema + data-source/licence/approximation notes for all three; chronological firing; wall-clock speed and pause; seek reconciliation (forward fires skipped pins, backward resolves future hazards and restores cellular); deterministic hazard ids and per-phone signed keys (`verify_report` ok, one key per reporter); chaos hazard + cellular; synthetic feed watermark and overlays appearing at the scripted `t`; full Lahaina timeline through the blackboard REST API and the real LangGraph pipeline in-process asserting `hazard.applied`, `routes.recomputed`, `community.hazard.created`, `network.cellular(down)` and the final `clock.tick`.
+
+### 8.1 + 8.2 + 8.3 dashboard — 2026-10-24 — 6 iterations
+- it1: Next 15 / React 19 / Tailwind app, Zustand store with a pure `applyMessage` reducer over `@arco/schemas` `AnyMessage` (no hand-written message types), `ReconnectingSocket` (exp backoff + jitter, state surfaced), REST through Next rewrites (services have no CORS). Port 3000 was taken by an unrelated local server → `DASHBOARD_PORT` env; e2e uses 3200/3201.
+- it2: MapLibre + deck.gl `MapboxOverlay` layers (hazard polygons, edges with severed flash, routes with snap width/colour animation, flow trips, population + report pins, labels) and a three.js `CustomLayerInterface` sharing the map GL context (hazard volumes, instanced crowd particles, beacons; FPS measured in `render`). `CustomLayerInterface.render` matrix typing → `ArrayLike<number>`.
+- it3: ESLint strict-type-checked on a browser app: `restrict-template-expressions` override for `apps/dashboard`, floating promises on map calls (`void`), `no-unnecessary-condition` from narrowing across awaits (`isDisposed()` helper), unsafe `Mesh` access cast. `pnpm lint` + `typecheck` clean. Verified visually in a desktop Chromium against the compose stack: satellite map, flashing severed edges, routes snapping (`SNAP #13 33 ms · compute 3.7 ms`), three.js ~120 fps with 5 volumes / 700 particles / 2 beacons, synthetic street feed, agent decisions, telemetry `RECORDED` badge from the replayed benchmark run.
+- it4: recorded replay `scripts/record-replay.mjs` → `public/recorded/lahaina_2023.replay.json` (1071 messages, 55 telemetry samples; edges normalised to open at t=0, stated in `notes`). Offline e2e showed `LIVE STACK`: `config.ts` read `process.env[name]` dynamically, which Next does not inline into the client bundle, so the dead-port overrides were ignored → literal `process.env.NEXT_PUBLIC_*` reads.
+- it5: offline e2e still stuck at `CONNECTING` although the replay fetch returned 200. Root cause from a scratch probe (passes) vs the test (fails): Playwright **tracing** reads the three WebGL canvases back on every expect poll; under headless SwiftShader the page stalls for seconds ("GPU stall due to ReadPixels") and never runs the fallback. Trace is now off by default (`PW_TRACE=1` opts in). Live e2e: at 200× every re-route re-arms the 450 ms flash, so `fired` was never reached while playing → the test pauses the backend clock first, then asserts firing → fired; the recorded clock ticks say `playing`, so the offline test disables whichever transport button is shown and the scrub bar.
+- it6: packaging — Makefile `dev-dashboard`/`test-dashboard`/`e2e-dashboard`/`record-replay`, `.env.example` NEXT_PUBLIC section, `apps/dashboard/README.md`, ARCHITECTURE "Dashboard internals" + limitations (GPU-dependent FPS, raw three.js custom layer not R3F, basemap tiles need internet, replay edges start open).
+```
+$ make test-dashboard
+ Test Files  5 passed (5)
+      Tests  20 passed (20)
+$ make e2e-dashboard
+  ✓  1 [live] › e2e/live.spec.ts:22:1 › plays the default scenario and the snap animation fires after a hazard event (33.8s)
+  ✓  2 [live] › e2e/live.spec.ts:97:1 › chaos button: cellular kill is reflected from the network event (12.9s)
+  ✓  3 [offline] › e2e/offline.spec.ts:8:1 › falls back to the recorded replay when the backend is unreachable (13.8s)
+  3 passed (1.2m)
+$ pnpm exec playwright test --project=live --reporter=json  (annotations)
+  snap = SNAP #11 863 ms · compute 4.0 ms        # hazard→routes latency from backend timestamps, 200× with 9 active hazards
+  telemetry = RECORDED                           # benchmark service replaying the committed run
+  three-fps = 1.0 fps (9 hazard volumes · 700 crowd particles · 2 beacons)   # headless SwiftShader software GL; ~120 fps measured in desktop Chromium on the same laptop
+$ make lint -> ruff clean, mypy clean, eslint clean, prettier clean, tsc clean (shared-schemas + dashboard)
+$ ARCO_REQUIRE_DB=1 make test -> 159 passed (pytest) / 14 + 20 passed (vitest)
+```
+Covers: reducer semantics (hazard upsert/resolve, edge state + flash, graph version + snap latency, clock, network, telemetry ring, agent event cap); backoff curve and reconnect state machine with fake timers; replay ordering, scheduling and looping; layer colour/width math; StatusBar/ControlBar/TelemetryStrip rendering; Playwright live scenario (snap fires after a hazard event, backend clock drives the UI, LIVE/RECORDED badge, measured FPS, street feed, pause) and backend-killed replay (RECORDED REPLAY badge + banner, agent events and snaps from the recording, controls disabled, reconnect counter climbs, no page errors). Not covered: the FPS *target* — the number is reported, not asserted, because the headless renderer is software GL.
