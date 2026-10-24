@@ -86,8 +86,36 @@ test-ts:
 	$(PNPM) test
 
 .PHONY: test-blackboard
-test-blackboard: ## Blackboard service tests (integration tests need `make db-up`)
-	$(UV) run pytest services/blackboard/tests -m "integration or not integration"
+test-blackboard: ## Blackboard tables/repo/migration tests; requires `make db-up` (DB-down is a failure)
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/blackboard/tests/test_migrations.py services/blackboard/tests/test_tables.py -q
+
+.PHONY: test-blackboard-events
+test-blackboard-events: ## Event bus (outbox + Redis + NOTIFY) + REST/WebSocket API tests; requires `make db-up`
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/blackboard/tests/test_bus.py services/blackboard/tests/test_api.py -q
+
+.PHONY: test-blackboard-all
+test-blackboard-all: ## Every blackboard test incl. ingestion; requires `make db-up`
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/blackboard/tests -q
+
+# ---------------------------------------------------------------------------
+# Blackboard service (host side)
+# ---------------------------------------------------------------------------
+SAMPLE_GRAPHML := data/samples/osm/lahaina_drive.graphml
+
+.PHONY: ingest-sample
+ingest-sample: ## Load the committed Lahaina OSM sample (offline, real OSM geometry) into road_edges
+	$(UV) run arco-blackboard-ingest --graphml $(SAMPLE_GRAPHML)
+
+.PHONY: ingest-bbox
+ingest-bbox: ## Download a road graph from OSM for BBOX="west,south,east,north" and ingest it
+	@[ -n "$(BBOX)" ] || (echo "usage: make ingest-bbox BBOX=west,south,east,north" && exit 1)
+	$(UV) run arco-blackboard-ingest --bbox "$(BBOX)" --save-graphml data/cache/osm_$(subst $(comma),_,$(BBOX)).graphml
+
+.PHONY: serve-blackboard
+serve-blackboard: ## Run the blackboard API on $$BLACKBOARD_PORT (default 8001) with reload
+	$(UV) run uvicorn arco_blackboard.api:app --host 0.0.0.0 --port $${BLACKBOARD_PORT:-8001} --reload --reload-dir services
+
+comma := ,
 
 # ---------------------------------------------------------------------------
 # Infra

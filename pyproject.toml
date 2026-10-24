@@ -22,6 +22,7 @@ dev = [
   "pytest-asyncio>=0.24",
   "pre-commit>=3.8",
   "types-PyYAML",
+  "types-shapely",
 ]
 
 # ---------------------------------------------------------------------------
@@ -60,7 +61,7 @@ mypy_path = "packages/shared-schemas/python:services/blackboard"
 exclude = ["alembic/versions/"]
 
 [[tool.mypy.overrides]]
-module = ["geoalchemy2.*", "redis.*"]
+module = ["geoalchemy2.*", "redis.*", "osmnx.*", "networkx.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]

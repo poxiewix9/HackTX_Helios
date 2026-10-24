@@ -63,7 +63,13 @@ class RoadEdge(_Entity):
     v: int = Field(description="Target OSM node id")
     length_m: float = Field(ge=0.0)
     base_cost: float = Field(ge=0.0, description="Travel cost with no hazards (seconds)")
-    current_cost: float = Field(ge=0.0, description="base_cost x penalties; inf when severed")
+    current_cost: float = Field(
+        ge=0.0,
+        description=(
+            "base_cost x penalties. Always finite; when status=severed the edge is "
+            "excluded from routing regardless of cost"
+        ),
+    )
     status: EdgeStatus = "open"
     capacity_estimate: float = Field(
         ge=0.0, description="People per minute the edge can carry before congestion"
@@ -71,6 +77,19 @@ class RoadEdge(_Entity):
     current_load: float = Field(default=0.0, ge=0.0, description="Assigned people per minute")
     highway: str | None = Field(default=None, description="OSM highway tag")
     name: str | None = None
+
+
+class EdgeOverlap(_Entity):
+    """Result row of the spatial query "which edges does this geometry touch".
+
+    `overlap_fraction = ST_Length(ST_Intersection(edge, geom)) / ST_Length(edge)` measured
+    in metres on the geography; 1.0 means the whole edge lies inside the hazard.
+    """
+
+    edge_id: int
+    overlap_fraction: float = Field(ge=0.0, le=1.0)
+    overlap_length_m: float = Field(ge=0.0)
+    edge_length_m: float = Field(ge=0.0)
 
 
 class EdgeHazardLink(_Entity):

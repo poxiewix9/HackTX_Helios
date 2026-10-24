@@ -7,6 +7,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+import arco_blackboard.models  # noqa: F401 - registers tables on Base.metadata
 from arco_blackboard.db import Base
 from arco_blackboard.settings import get_settings
 

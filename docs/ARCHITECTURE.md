@@ -126,9 +126,36 @@ Pydantic models (python/arco_schemas/*.py)
 
 | Phase | Scope                                   | Status      |
 |-------|-----------------------------------------|-------------|
-| 1     | Scaffold, schemas, compose, migrations, CI | **done** (this document) |
-| 2     | Blackboard tables, events, API, OSMnx   | next        |
+| 1     | Scaffold, schemas, compose, migrations, CI | **done** |
+| 2     | Blackboard tables, events, API, OSMnx   | **done** (see "Blackboard internals") |
 | 3-10  | see `PROJECT_SPEC.md` §8                | pending     |
+
+## Blackboard internals (Phase 2)
+
+- **Tables** (`alembic/versions/0002_tables.py`): `hazards`, `road_edges`,
+  `edge_hazard_links`, `community_reports`, `safe_zones`, `routes`, `agent_events`, plus
+  `graph_state` (single-row `version`) and `bus_outbox`. GiST indexes on every geometry
+  column; `routes.path` and `safe_zones.geom` included.
+- **Write + event atomically.** `BlackboardService` performs each row change and
+  `Publisher.publish()` in one transaction: `seq = nextval(bus_outbox_id_seq)`, row into
+  `bus_outbox`, `pg_notify('blackboard_events', seq)`. After commit the same
+  `BusEnvelope` is mirrored to Redis `blackboard.<topic>`. Redis is optional; without it
+  subscribers `LISTEN` and hydrate the envelope from the outbox by id.
+- **Catch-up.** `seq` == outbox id, monotonic. `GET /events?since_seq` and
+  `/ws/blackboard?since_seq` replay from the outbox before going live, de-duplicated by
+  `seq`.
+- **Spatial queries.** bbox filters use `geom && ST_MakeEnvelope(..., 4326)`;
+  `edges_intersecting(geom)` returns `EdgeOverlap{edge_id, overlap_fraction}` where the
+  fraction is `ST_Length(ST_Intersection)::geography / ST_Length(edge)::geography` (metres,
+  not degrees); `reports_near` uses geography `ST_DWithin`.
+- **Graph version.** Bumped whenever `road_edges` state changes (`update_edge_states`) or
+  the graph is reloaded; `graph.updated` carries `changed_edge_ids` or
+  `full_rebuild=true`.
+- **Ingestion.** OSMnx MultiDiGraph → one row per directed `(u, v, key)` edge;
+  `base_cost = length_m / speed_m_s[highway]`, `capacity_estimate` by highway class, both
+  from `services/blackboard/config/ingest.yaml`. The committed Lahaina sample
+  (`data/samples/osm/lahaina_drive.graphml`, OSM/ODbL, 266 nodes / 637 edges) makes
+  tests and the demo offline.
 
 ## Limitations (honest list, kept current)
 
@@ -149,5 +176,7 @@ Pydantic models (python/arco_schemas/*.py)
   `SimulatedMeshTransport`, which is clearly labelled.
 - **SLM is optional.** Route text falls back to deterministic templates when Ollama /
   llama.cpp is unavailable; speculative decoding depends on the runtime supporting it.
+- **Current-day OSM geometry.** The Lahaina sample is a present-day OSM snapshot; roads
+  may differ from August 2023. Scenario files state this.
 - **Local dev runtime.** On this development machine Docker runs under Colima; Compose
   behaviour is identical but GPU passthrough is unavailable, so vision runs on CPU here.

@@ -1,7 +1,7 @@
 /* eslint-disable */
 /**
  * GENERATED FILE - DO NOT EDIT.
- * Source: packages/shared-schemas/schema/arco.schema.json (schema version 0.1.0)
+ * Source: packages/shared-schemas/schema/arco.schema.json (schema version 0.2.0)
  * Regenerate with `make schemas`.
  */
 
@@ -314,7 +314,7 @@ export interface RoadEdge {
    */
   capacity_estimate: number;
   /**
-   * base_cost x penalties; inf when severed
+   * base_cost x penalties. Always finite; when status=severed the edge is excluded from routing regardless of cost
    */
   current_cost: number;
   /**
@@ -363,6 +363,10 @@ export interface LineString {
  */
 export interface GraphUpdatedEvent {
   changed_edge_ids: number[];
+  /**
+   * True after (re)ingestion: consumers must reload every edge
+   */
+  full_rebuild?: boolean;
   graph_version: number;
   penalized_count: number;
   /**
@@ -819,6 +823,21 @@ export interface EdgeHazardLink {
    * Cost multiplier; inf for sever
    */
   penalty_applied: number;
+}
+/**
+ * Result row of the spatial query "which edges does this geometry touch".
+ *
+ * `overlap_fraction = ST_Length(ST_Intersection(edge, geom)) / ST_Length(edge)` measured
+ * in metres on the geography; 1.0 means the whole edge lies inside the hazard.
+ *
+ * This interface was referenced by `ArcoSchemaBundle`'s JSON-Schema
+ * via the `definition` "EdgeOverlap".
+ */
+export interface EdgeOverlap {
+  edge_id: number;
+  edge_length_m: number;
+  overlap_fraction: number;
+  overlap_length_m: number;
 }
 /**
  * Header for one intermediate-activation tensor streamed from edge to base.

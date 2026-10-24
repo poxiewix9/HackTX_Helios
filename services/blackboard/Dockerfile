@@ -28,7 +28,7 @@ COPY services/blackboard services/blackboard
 RUN uv sync --frozen --no-dev --package arco-blackboard
 
 WORKDIR /app/services/blackboard
-HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
-  CMD python -c "from arco_blackboard.db import db_reachable; import sys; sys.exit(0 if db_reachable() else 1)"
+EXPOSE 8001
 
+# Default: migrate. Compose overrides the command for the API container.
 CMD ["python", "-m", "arco_blackboard.migrate"]

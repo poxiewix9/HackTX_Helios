@@ -37,6 +37,7 @@ TOP_LEVEL_MODELS: tuple[type[BaseModel], ...] = (
     # blackboard
     s.Hazard,
     s.RoadEdge,
+    s.EdgeOverlap,
     s.EdgeHazardLink,
     s.CommunityReport,
     s.SafeZone,

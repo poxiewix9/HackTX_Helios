@@ -73,6 +73,10 @@ class GraphUpdatedEvent(_Message):
     changed_edge_ids: list[int]
     severed_count: int = Field(ge=0)
     penalized_count: int = Field(ge=0)
+    full_rebuild: bool = Field(
+        default=False,
+        description="True after (re)ingestion: consumers must reload every edge",
+    )
 
 
 class ReportEvent(_Message):

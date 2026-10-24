@@ -40,3 +40,37 @@ Known limitations:
   - `pgrouting/pgrouting:16-3.4-3.6` does not exist; compose uses `16-3.5-3.8` (PostGIS 3.5.2, pgRouting 3.8.0).
   - CI workflow is written but has not run on GitHub yet (no remote configured).
   - Dev machine runs Docker via Colima (no GPU passthrough); vision work will measure CPU numbers here.
+
+### [blackboard -> reviewer, agents, simulator, dashboard] 2026-10-24 15:50  2.1, 2.2, 2.3
+What I built: `services/blackboard` — ORM tables + Alembic `0002_tables` (GiST on every geometry), `convert` (arco_schemas ⇄ rows),
+`repo` (spatial queries), `bus` (transactional outbox + `pg_notify` + Redis mirror after commit; Notify/Redis subscribers; outbox catch-up),
+`service` (`BlackboardService`: every write publishes its event in the same transaction), `api` (FastAPI REST + `/ws/blackboard`),
+`ingest` (OSMnx → `road_edges`, cost/capacity from `config/ingest.yaml`), the committed Lahaina OSM sample, compose `blackboard` service.
+How to run/test:
+  docker compose up -d --wait && make healthcheck
+  make ingest-sample
+  make test-blackboard && make test-blackboard-events && make test-blackboard-all
+Interfaces I expose / changed:
+  - Schema 0.2.0 (`arco_schemas`): new `EdgeOverlap{edge_id, overlap_fraction}`; `GraphUpdatedEvent.full_rebuild: bool = False`.
+    Regenerated bundle + TS (`make schemas`), `schemas-check` clean.
+  - REST on :8001 (see services/blackboard/README.md). Key ones for agents: `POST /edges/intersecting {geom}` → `EdgeOverlap[]`
+    (fraction is metric), `GET /edges?bbox=&status=&ids=`, `GET /graph/version`, `GET /routes`, `GET /events?since_seq=&topics=`.
+  - WS `/ws/blackboard?since_seq=&topics=`: one `BlackboardMessage` JSON per frame; `since_seq` present ⇒ replay outbox then live
+    (dedup by seq); absent ⇒ live only. Topics: hazard, edge, graph, report, safe_zone, agent, routes.
+  - Python (in-process use by agents/simulator): `BlackboardService(engine, publisher)` with `upsert_hazard`, `set_hazard_status`,
+    `edges_intersecting(geom)`, `apply_edge_updates(updates, links=, unlink_hazard_ids=, scenario_t=)` → emits `edge.updated` +
+    `graph.updated` in one transaction, `publish_routes(routes, trigger=, compute_ms=, max_edge_load_ratio=)`, `append_agent_event`.
+    `bus.make_subscriber(settings).events(topics)` yields `BusEnvelope`s.
+  - Semantics: `road_edges.current_cost` is what Navigator must read (base_cost × penalty, or ∞/severed); `base_cost` is seconds at
+    evacuation speed for the highway class; `graph_version` increments on every edge state change and on reload.
+  - Default scenario_t when none is given is -1.0 (`NO_SCENARIO`); the simulator should always pass the clock.
+What I need from you:
+  - Reviewer: `/review` 2.1-2.3.
+  - Agents (3.1): subscribe to topic `hazard`; use `edges_intersecting` + `apply_edge_updates`; do not write `road_edges` directly.
+  - Simulator (7.1): inject hazards via `POST /hazards?scenario_t=` (or `BlackboardService.upsert_hazard`), source=`simulated`.
+  - Dashboard (8.1): connect to `/ws/blackboard?since_seq=0` for initial state + live; `GET /edges?bbox` for the base graph.
+Known limitations:
+  - `edges_intersecting` is a plain `ST_Intersects` + overlap fraction; time-expanding buffers are the Cartographer's job (3.1).
+  - WS fan-out is single-process (one subscription per API process); fine for the demo, not for horizontal scaling.
+  - Lahaina sample is present-day OSM geometry (may differ from Aug 2023); scenario files must say so.
+  - `make schemas-check` compares against the git index, so it reports "stale" while the regenerated files are uncommitted — it is clean after commit.

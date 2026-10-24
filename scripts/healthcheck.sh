@@ -58,5 +58,22 @@ else
   echo "  no PONG"; fail=1
 fi
 
+echo "== blackboard api =="
+bb_port="${BLACKBOARD_PORT:-8001}"
+if [[ "$(status blackboard)" == "" ]]; then
+  echo "  not running (optional in Phase 1; start with: docker compose up -d blackboard)"
+else
+  for _ in $(seq 1 30); do
+    [[ "$(status blackboard)" == "healthy" ]] && break
+    sleep 2
+  done
+  if body="$(curl -fsS "http://localhost:${bb_port}/health" 2>/dev/null)"; then
+    echo "  $body"
+    echo "$body" | grep -q '"status":"ok"' || { echo "  status not ok"; fail=1; }
+  else
+    echo "  GET /health failed on port ${bb_port}"; fail=1
+  fi
+fi
+
 if (( fail )); then echo "healthcheck: FAIL"; exit 1; fi
 echo "healthcheck: OK"

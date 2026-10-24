@@ -16,21 +16,24 @@ and an offline community mesh. See `PROJECT_SPEC.md` for the full specification 
   `brew install colima docker docker-compose && colima start`
 - GNU make
 
-## Quick start (Phase 1)
+## Quick start (Phases 1–2)
 
 ```bash
 make bootstrap          # uv sync, pnpm install, .env, pre-commit hooks
-docker compose up -d --wait postgres redis
-make migrate            # Alembic -> PostGIS + pgRouting extensions
-make healthcheck        # containers healthy, extensions present, Redis PONG
+docker compose up -d --wait   # postgres+redis, migrate one-shot, blackboard API :8001
+make healthcheck        # containers healthy, extensions present, Redis PONG, API /health ok
+make ingest-sample      # Lahaina OSM road graph (offline sample) -> road_edges
+curl "localhost:8001/edges?bbox=-156.7,20.86,-156.66,20.9" | head -c 300
 make lint               # ruff + mypy --strict + eslint + prettier + tsc
 make test               # pytest (unit + integration) + vitest
+make test-blackboard-all      # blackboard tables, bus, REST/WS, ingestion (needs DB)
 make schemas            # regenerate JSON Schema + TS types from Pydantic
 make schemas-check      # fail if generated files are stale
 ```
 
-`docker compose up -d --wait` also runs the `blackboard-migrate` one-shot container, so a
-fresh machine needs no host-side Python to get a migrated database.
+`docker compose up -d --wait` runs the `blackboard-migrate` one-shot before starting the
+`blackboard` API, so a fresh machine needs no host-side Python to get a migrated database.
+Stream events: `websocat "ws://localhost:8001/ws/blackboard?since_seq=0"`.
 
 ## Repository layout
 

@@ -8,6 +8,7 @@ from arco_schemas.blackboard import (
     AgentName,
     CommunityReport,
     EdgeHazardLink,
+    EdgeOverlap,
     EdgeStatus,
     Hazard,
     HazardSource,
@@ -86,7 +87,7 @@ from arco_schemas.vision import (
     TileGeoref,
 )
 
-SCHEMA_VERSION = "0.1.0"
+SCHEMA_VERSION = "0.2.0"
 
 __all__ = [
     "HAZARD_CLASSES",
@@ -116,6 +117,7 @@ __all__ = [
     "EdgeAction",
     "EdgeEvent",
     "EdgeHazardLink",
+    "EdgeOverlap",
     "EdgeStatus",
     "FeaturePacketHeader",
     "Geometry",

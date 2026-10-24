@@ -1,7 +1,8 @@
 name: arco
 
 # Phase 1: infra (PostGIS + pgRouting, Redis) and the blackboard migration one-shot.
-# Later phases add: blackboard API, base-station, agents, simulator, dashboard.
+# Phase 2: blackboard API (REST + /ws/blackboard) on ${BLACKBOARD_PORT:-8001}.
+# Later phases add: base-station, agents, simulator, dashboard.
 # Values come from .env (copy .env.example). Defaults below match .env.example.
 
 services:
@@ -51,6 +52,41 @@ services:
         condition: service_healthy
     command: ["python", "-m", "arco_blackboard.migrate"]
     restart: "no"
+
+  blackboard:
+    build:
+      context: .
+      dockerfile: services/blackboard/Dockerfile
+    container_name: arco-blackboard
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-arco}:${POSTGRES_PASSWORD:-arco_dev_password}@postgres:5432/${POSTGRES_DB:-arco}
+      REDIS_URL: redis://redis:6379/0
+      BLACKBOARD_PORT: 8001
+      ARCO_LOG_LEVEL: ${ARCO_LOG_LEVEL:-INFO}
+      ARCO_LOG_JSON: ${ARCO_LOG_JSON:-true}
+    ports:
+      - "${BLACKBOARD_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      blackboard-migrate:
+        condition: service_completed_successfully
+    command: ["python", "-m", "arco_blackboard.api"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3); sys.exit(0 if r.status==200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
 
 volumes:
   pgdata:

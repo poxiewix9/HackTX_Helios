@@ -1,0 +1,17 @@
+{
+  "id": "lahaina_drive",
+  "description": "Drivable road network of Lahaina town, Maui (HI), used by the Lahaina 2023 scenario and by `make ingest-sample`.",
+  "graphml": "data/samples/osm/lahaina_drive.graphml",
+  "road_graph_source": "osmnx_bbox",
+  "bbox_wsen": "-156.695,20.862,-156.662,20.897",
+  "network_type": "drive",
+  "source": {
+    "name": "OpenStreetMap contributors via OSMnx",
+    "url": "https://www.openstreetmap.org/copyright",
+    "license": "ODbL 1.0",
+    "note": "Snapshot downloaded with OSMnx; current-day road geometry, which may differ from August 2023."
+  },
+  "fetched_at": "2026-10-24T19:34:39Z",
+  "nodes": 266,
+  "edges": 637
+}
