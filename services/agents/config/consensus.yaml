@@ -1,0 +1,52 @@
+# Consensus agent policy. All numbers the agent uses live here; the code only applies them.
+#
+# A community report is one signed, anonymous observation from a device. Alone it moves
+# nothing. The agent looks for AGREEMENT between INDEPENDENT reporters (distinct device
+# keys) that is close in space and time, weighs it by how much each reporter has earned
+# our trust, and only then writes to the blackboard — always through the same hazard path
+# the vision pipeline uses, never into road_edges or routes directly.
+
+trust:
+  prior: 0.5 # a device we have never seen
+  min_to_count: 0.3 # below this a reporter contributes nothing to a quorum
+  corroborated: 0.10 # reward when vision (or an independent quorum) later agrees
+  contradicted: -0.15 # penalty when a trusted quorum or vision contradicts the report
+  rate_limited: -0.05 # penalty per report dropped by the rate limiter
+  floor: 0.05
+  cap: 0.95
+
+rate_limit:
+  max_reports: 5 # per reporter ...
+  window_s: 120 # ... in this rolling window; extra reports are rejected (and logged)
+
+cluster: # spatial-temporal DBSCAN over pending hazard pins of ONE class
+  eps_m: 60 # two reports are neighbours when BOTH distances are within eps:
+  eps_s: 300 #   distance = max(d_m / eps_m, dt_s / eps_s) <= 1
+  min_reports: 2 # DBSCAN min_pts (core point needs this many incl. itself)
+
+quorum: # what turns a cluster into an override
+  k_independent: 2 # distinct trusted reporters (trust >= trust.min_to_count)
+  min_weighted: 1.0 # sum of their trust scores (2 fresh reporters at 0.5 = 1.0)
+  vision_negative_radius_m: 80 # "vision-negative": no ACTIVE vision hazard of that class within this radius
+  recently_resolved_s: 900 # a vision hazard of that class resolved this recently gets `disputed`
+
+community_hazard:
+  pin_radius_m: 25 # footprint = convex hull of the pins, buffered by this
+  base_confidence: 0.6 # with exactly k reporters ...
+  per_extra_reporter: 0.1 # ... +this per additional independent reporter ...
+  max_confidence: 0.9
+  severity: 0.7
+  ttl_s: 600
+
+corroboration: # reports that agree with an existing active vision hazard
+  radius_m: 80
+  confidence_boost: 0.05 # per independent trusted confirmer
+  max_confidence: 0.98
+
+denial: # confirm/deny/all_clear against an existing hazard (target_hazard_id or nearest)
+  radius_m: 80
+  k_independent: 2
+  min_weighted: 1.0
+  confidence_factor: 0.5 # confidence *= this when a denial quorum forms
+  resolve_community_below: 0.35 # a COMMUNITY hazard whose confidence drops below this is resolved
+  # a VISION hazard is never deleted by denials: it becomes `disputed` and keeps its geometry

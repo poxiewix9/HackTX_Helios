@@ -131,8 +131,9 @@ Pydantic models (python/arco_schemas/*.py)
 | 2     | Blackboard tables, events, API, OSMnx   | **done** (see "Blackboard internals") |
 | 3     | Cartographer + Navigator (deterministic), SLM behind an interface | **done** (see "Agents internals") |
 | 4     | Split-inference vision: ONNX split + INT8 head, edge-capture, base-station (georef, telemetry, synthetic fallback) | **done** (see "Vision internals") |
-| 5     | Benchmark harness: A vs B on identical frames, JSON/CSV, hardware from the machine, recorded replay | **built, in review** (see "Benchmark internals") |
-| 6-10  | see `PROJECT_SPEC.md` §8                | pending     |
+| 5     | Benchmark harness: A vs B on identical frames, JSON/CSV, hardware from the machine, recorded replay | **done** (see "Benchmark internals") |
+| 6     | Consensus agent: signed community reports, trust ledger, ST-DBSCAN, vision-negative override, disputes | **built, in review** (see "Consensus internals") |
+| 7-10  | see `PROJECT_SPEC.md` §8                | pending     |
 
 ## Blackboard internals (Phase 2)
 
@@ -281,13 +282,52 @@ Pydantic models (python/arco_schemas/*.py)
   hardware is privacy and edge-offload flexibility, not latency or bandwidth. Details and
   the reasoning in `services/benchmark/README.md`.
 
+## Consensus internals (Phase 6)
+
+- **Signed reports.** A `CommunityReport` is signed by the phone's Ed25519 key over a
+  canonical JSON form (`arco_agents.reports.canonical_bytes`: sorted keys, compact
+  separators, coordinates rounded to 6 dp, `created_at` as ISO-8601 ms `Z`).
+  `reporter_hash = sha256(raw 32-byte pubkey)`; `device_pubkey`/`signature` are base64.
+  Reports that fail verification are logged as `report.rejected{reason=signature}` and
+  never influence the graph.
+- **Trust + rate limit.** Per-reporter trust starts at the prior (0.5), rises when a
+  report is corroborated (by other reporters or by vision), falls when contradicted by a
+  denial quorum, and is clamped to [floor, cap]. A reporter below `min_to_count` still
+  has its reports stored but they do not count toward quorum. More than
+  `rate_limit.max_reports` within `window_s` → rejected and trust docked.
+- **Clustering.** Pending pins of one class go through a hand-written spatial-temporal
+  DBSCAN (`eps_m`=60 m, `eps_s`=300 s, `min_pts`=2).
+- **Override (the smoke false-negative case).** A cluster with ≥ `k_independent` (2)
+  distinct trusted reporters and weighted trust ≥ `min_weighted` at a spot where there is
+  **no active vision hazard** of that class within `vision_negative_radius_m` becomes a
+  `source=community` hazard (geometry: convex hull of the pins buffered by
+  `pin_radius_m`; confidence 0.6 + 0.1 per extra reporter, capped 0.9; TTL 600 s). The
+  Consensus writes it through `BlackboardService.upsert_hazard` — the same path as
+  vision — and the LangGraph run continues into Cartographer → Navigator in the same
+  invocation, so the reroute happens immediately; the bus redelivery of that
+  `hazard.created` (same `seq`) is deduplicated. If vision had *recently resolved* a
+  hazard there, that hazard is marked `disputed`, not trusted silently.
+- **Corroboration / denial.** Pins near an active vision hazard raise its confidence
+  (+0.05, cap 0.98) and the reporter's trust. `deny`/`all_clear` from ≥ k independent
+  trusted reporters halves a vision hazard's confidence and sets `status=disputed`
+  (never deleted; Cartographer releases penalties for non-active hazards); for a
+  community hazard it resolves it when the confidence drops below
+  `resolve_community_below` and docks the original reporters.
+- **Everything is explained.** Each decision writes an `AgentEvent(agent="consensus")`
+  with the counts, weights and radii in `reasoning`/`data`, so the dashboard's agent
+  panel can show *why* the community overrode the vision.
+- Policy: `services/agents/config/consensus.yaml`. Tests: `make test-consensus`
+  (`services/agents/tests/test_consensus.py`, including the end-to-end smoke
+  false-negative → community hazard → penalize/sever → reroute test).
+
 ## Limitations (honest list, kept current)
 
 - **Dispersal is static.** Frank–Wolfe over k candidate paths with BPR congestion is a
   planning heuristic, not a time-expanded evacuation simulation; overload is flagged
   (`routes.recomputed.overload`), not guaranteed away.
-- **No consensus yet.** Until Phase 6 every `hazard.*` event is applied at face value
-  (confidence gates only).
+- **Consensus trust is per-instance and Sybil-resistant only in degree.** "Independent"
+  means distinct device keys; a flood of fresh keys can still reach quorum, slowed only by
+  the rate limit and the trust floor. Trust resets to the prior on restart.
 
 - **Simulated footage.** Street feeds are synthetic composites and macro frames are
   static tiles; detections on them come from pretrained or synthetic detectors, not models

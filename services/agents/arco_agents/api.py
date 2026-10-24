@@ -1,6 +1,6 @@
 """Agents service HTTP/WS surface (port AGENTS_PORT, default 8003).
 
-GET  /health                 runtime state (graph version, population, bus mode, errors)
+GET  /health                 runtime state (graph version, population, consensus, bus mode, errors)
 GET  /routes                 current routes from the blackboard
 GET  /agent-events           recent reasoning trail
 POST /navigator/population   load PopulationCells + SafeZoneSpecs and recompute
@@ -50,6 +50,9 @@ class HealthResponse(BaseModel):
     last_compute_ms: float | None
     last_max_edge_load_ratio: float | None
     processed_events: int
+    consensus_reports_seen: int
+    consensus_pending_pins: int
+    consensus_known_reporters: int
     ticks: int
     scenario_t: float
     recent_errors: list[str]
@@ -98,6 +101,9 @@ def create_app(settings: AgentsSettings | None = None) -> FastAPI:
                 round(last.assignment.max_edge_load_ratio, 3) if last and last.assignment else None
             ),
             processed_events=rt.pipeline.processed,
+            consensus_reports_seen=len(rt.consensus.seen_reports),
+            consensus_pending_pins=sum(len(v) for v in rt.consensus.pending.values()),
+            consensus_known_reporters=len(rt.consensus.trust.scores),
             ticks=rt.ticks,
             scenario_t=rt.scenario_t,
             recent_errors=rt.pipeline.errors[-5:],

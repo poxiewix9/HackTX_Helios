@@ -214,6 +214,27 @@ class BlackboardService:
         assert isinstance(env.message, ReportEvent)
         return env.message
 
+    def update_report(
+        self,
+        report_id: UUID,
+        *,
+        trust_score: float | None = None,
+        confirms: int | None = None,
+        denies: int | None = None,
+    ) -> CommunityReport | None:
+        """Consensus writes its opinion back onto the report row (no event: reports are
+        inputs, the resulting hazard changes are what the bus carries)."""
+        with session_scope(self.engine) as s:
+            return repo.update_report_counts(
+                s, report_id, confirms=confirms, denies=denies, trust_score=trust_score
+            )
+
+    def reports_near(
+        self, lon: float, lat: float, radius_m: float, *, since: datetime | None = None
+    ) -> list[CommunityReport]:
+        with session_scope(self.engine) as s:
+            return repo.reports_near(s, lon, lat, radius_m, since=since)
+
     def list_reports(
         self, *, bbox: BBox | None = None, since: datetime | None = None, limit: int = 1000
     ) -> list[CommunityReport]:

@@ -10,6 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 SERVICE_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PENALTIES = SERVICE_ROOT / "config" / "penalties.yaml"
 DEFAULT_ROUTING = SERVICE_ROOT / "config" / "routing.yaml"
+DEFAULT_CONSENSUS = SERVICE_ROOT / "config" / "consensus.yaml"
 
 
 class AgentsSettings(BaseSettings):
@@ -31,6 +32,7 @@ class AgentsSettings(BaseSettings):
 
     arco_penalties_path: Path = DEFAULT_PENALTIES
     arco_routing_path: Path = DEFAULT_ROUTING
+    arco_consensus_path: Path = DEFAULT_CONSENSUS
     # Population cells + safe zones the Navigator routes for. JSON file with
     # {"population_cells": [...], "safe_zones": [...]} (arco_schemas.scenario shapes) or a
     # full Scenario file. Empty -> wait for POST /navigator/population.

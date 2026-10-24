@@ -9,6 +9,7 @@ dependencies = [
   "langgraph>=0.2.30",
   "networkx>=3.3",
   "shapely>=2.0",
+  "cryptography>=43.0",
   "pyproj>=3.6",
   "pydantic-settings>=2.5",
   "structlog>=24.4",

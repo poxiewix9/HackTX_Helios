@@ -15,8 +15,8 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 | 3.2  | agents     | 3.1        | Navigator + crowd dispersal                   | `make test-navigator`                             | DONE        | see log 3.2 |
 | 4.1  | vision     | 1.2        | Export, split, quantize                       | `make test-split`                                 | DONE        | see log 4.1 |
 | 4.2  | vision     | 4.1,2.2    | Edge capture + base station + georef          | `make test-vision-e2e`                            | DONE        | see log 4.2 |
-| 5.1  | benchmark  | 4.2        | FP32 vs split benchmark + recorded replay     | `make bench`                                      | IN_REVIEW        | see log 5.1 |
-| 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | TODO        |          |
+| 5.1  | benchmark  | 4.2        | FP32 vs split benchmark + recorded replay     | `make bench`                                      | DONE        | see log 5.1 |
+| 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | IN_REVIEW   | see log 6.1 |
 | 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | TODO        |          |
 | 7.2  | simulator  | 7.1        | Lahaina, Joplin, Camp Fire scenarios          | `make validate-scenarios`                         | TODO        |          |
 | 8.1  | dashboard  | 1.2        | Dashboard shell against mock feed             | `pnpm --filter dashboard test`                    | TODO        |          |
@@ -224,3 +224,22 @@ $ docker compose up -d --wait benchmark && curl :8005/health -> replay_run_id=20
 $ make lint -> clean (mypy 30+19+15+13+12 files); make test -> 135 passed / 14 vitest
 ```
 Honest result: on this CPU-only machine **both pipelines miss** 80 ms / 30 fps; bottleneck is the FP32 tail (~57–61 ms) in both; the split is ~1 % faster; its packet is *larger* than JPEG q90 at this cut (128 kB vs 108 kB). Written as such in `services/benchmark/README.md` and ARCHITECTURE. The harness reports the bottleneck instead of hiding it, as the spec requires.
+
+### Phase 5 gate — 2026-10-24 (Orchestrator, after Reviewer pass on 5.1)
+Reviewed: harness runs A (FP32 full) and B (INT8 split) on identical frames with one pacing model, reports JSON + CSV, reads hardware from the machine, replays recorded runs with `mode=recorded`, and reports the missed target + bottleneck instead of hiding it. 5.1 → DONE.
+
+### 6.1 agents — 2026-10-24 — 4 iterations
+- it1: `_hazards_near` built `BBox(west=…)` but `BBox` is an `Annotated` 4-list → pass `[w, s, e, n]`. `cryptography` added to `services/agents` deps (`uv sync`).
+- it2: wired Consensus into the LangGraph: `report.*` → consensus node → (hazard written) → cartographer → navigator in the **same** run; `handled_hazard_seqs` dedupes the bus redelivery of the consensus-written `hazard.created`; `observe_hazard` on `hazard.*` is guarded so a Consensus crash never blocks the Cartographer. `AgentsRuntime` TOPICS += `report`; `/health` exposes consensus counters.
+- it3: ruff E501 ×18 / PLR0917 ×2 in the reasoning strings and helpers → keyword-only helpers, wrapped strings (no rule changes). mypy on the tests: `HazardClass` is a `StrEnum`, not a Literal → typed constants + `_kind()/_cons()` helpers instead of indexing `dict | None`.
+- it4: all green.
+```
+$ make test-consensus
+ARCO_REQUIRE_DB=1 uv run pytest services/agents/tests/test_consensus.py -q -p no:cacheprovider
+.........                                                                [100%]
+9 passed in 5.14s
+$ make lint -> ruff clean, mypy 23 (agents) + others no issues, eslint/prettier/tsc clean
+$ make test -> 144 passed (pytest) / Test Files 2 passed, Tests 14 passed (vitest)
+```
+Covers: Ed25519 sign/verify + tamper (moved pin, swapped pubkey, swapped pubkey+hash all rejected), canonical bytes stable across JSON round-trip; ST-DBSCAN (space + time separation, chain growth, empty); trust floor/cap and sliding-window rate limit; **smoke false-negative integration**: vision-negative spot on the longest route, phone-1 pin → `report.pending` (no hazard), phone-1 again → still nothing (not independent), phone-2 → `community.hazard.created` (source=community, conf 0.6) → Cartographer penalized/severed the route edge → Navigator rerouted, all in one pipeline run; AgentEvent reasoning contains "vision-negative" and "2 independent"; bus redelivery of that hazard event does not re-run the Cartographer. Also: pins near an active vision hazard corroborate (0.6 → 0.7) instead of duplicating; two independent denials → vision hazard `disputed` with geometry intact (never deleted) and penalties released; community hazard resolved by denial quorum with reporter trust docked; forged signature and 6th/7th report in the window rejected with reasons logged; vision arriving later credits pending pins; Consensus crash isolated (`errors` recorded, Cartographer still severs).
+Live against the compose stack (agents image rebuilt): two signed `POST :8001/reports` at the midpoint of Lahainaluna Road (on the longest current route) → agents log `consensus kind=report.pending` then `community.hazard.created reports=2 hazards=1` → `cartographer penalized=14 graph_version=37` → `navigator routes=6 compute_ms=16.4 trigger=graph.updated`; `/edges` shows the edge `penalized 12.5 → 25.2`; `/health` `consensus_reports_seen=2 known_reporters=2 recent_errors=[]`.

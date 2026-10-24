@@ -114,6 +114,10 @@ test-cartographer: ## 3.1 Cartographer: policy math + sever/penalize/restore on 
 test-navigator: ## 3.2 Navigator: A*, dispersal, measured <1s reroute + LangGraph pipeline (needs DB)
 	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests/test_navigator.py services/agents/tests/test_pipeline.py -q -s
 
+.PHONY: test-consensus
+test-consensus: ## 6.1 Consensus: signing, clustering, trust, smoke false-negative override (needs DB)
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests/test_consensus.py -q -p no:cacheprovider
+
 .PHONY: test-agents
 test-agents: ## Every agents test
 	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests -q

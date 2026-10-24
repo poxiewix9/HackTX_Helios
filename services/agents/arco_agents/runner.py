@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from arco_agents.cartographer import Cartographer
+from arco_agents.consensus import Consensus, ConsensusPolicy
 from arco_agents.explain import DeterministicExplainer, Explainer, SlmExplainer
 from arco_agents.logging import configure_logging, get_logger
 from arco_agents.navigator import Navigator
@@ -27,7 +28,7 @@ from arco_schemas import BusEnvelope, ClockEvent
 
 log = get_logger("agents.runner")
 
-TOPICS = {"hazard", "graph", "edge", "clock"}
+TOPICS = {"hazard", "graph", "edge", "clock", "report"}
 
 
 def make_explainer(settings: AgentsSettings) -> Explainer:
@@ -44,6 +45,7 @@ class AgentsRuntime:
     service: BlackboardService
     cartographer: Cartographer
     navigator: Navigator
+    consensus: Consensus
     pipeline: Pipeline
     scenario_t: float = NO_SCENARIO
     bus_mode: str = "unknown"
@@ -64,12 +66,14 @@ class AgentsRuntime:
         navigator = Navigator(
             service, RoutingConfig.load(settings.arco_routing_path), make_explainer(settings)
         )
+        consensus = Consensus(service, ConsensusPolicy.load(settings.arco_consensus_path))
         rt = cls(
             settings=settings,
             service=service,
             cartographer=cartographer,
             navigator=navigator,
-            pipeline=Pipeline(cartographer, navigator),
+            consensus=consensus,
+            pipeline=Pipeline(cartographer, navigator, consensus),
             bus_mode=publisher.mode,
         )
         if settings.arco_population_path is not None:
