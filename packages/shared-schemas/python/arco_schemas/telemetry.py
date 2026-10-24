@@ -15,7 +15,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from arco_schemas.hazard_classes import StreamKind
 
 TelemetryMode = Literal["live", "recorded"]
-PipelineKind = Literal["fp32_full", "int8_split"]
+PipelineKind = Literal["fp32_full", "int8_split", "synthetic"]
+"""`synthetic` = the scripted fallback detector ran through the split topology; its timings
+are real but say nothing about a model."""
 
 Stage = Literal[
     "capture",
@@ -84,6 +86,9 @@ class BenchmarkResult(BaseModel):
 
     mode: TelemetryMode
     pipeline: PipelineKind
+    stream: StreamKind | None = Field(
+        default=None, description="Stream the run was measured on; None = aggregated"
+    )
     run_id: str
     started_at: datetime
     hardware: HardwareInfo

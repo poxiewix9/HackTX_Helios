@@ -133,7 +133,7 @@ def test_frame_to_hazard_row_with_telemetry(served_factory: Any) -> None:
     tele = [TelemetryMessage.model_validate(m).sample for m in tel_ws.messages]
     assert len(tele) == n_frames
     s = tele[-1]
-    assert s.mode == "live" and s.pipeline == "int8_split" and s.stream == "micro"
+    assert s.mode == "live" and s.pipeline == "synthetic" and s.stream == "micro"
     assert set(s.stage_ms) == set(STAGES)
     assert s.stage_ms["deserialize"] > 0 and s.stage_ms["georef"] > 0
     assert s.total_ms == pytest.approx(sum(s.stage_ms.values()))

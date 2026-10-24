@@ -20,13 +20,15 @@ COPY services/blackboard/pyproject.toml services/blackboard/pyproject.toml
 COPY services/agents/pyproject.toml services/agents/pyproject.toml
 COPY services/edge-capture/pyproject.toml services/edge-capture/pyproject.toml
 COPY services/base-station/pyproject.toml services/base-station/pyproject.toml
+COPY services/benchmark/pyproject.toml services/benchmark/pyproject.toml
 # uv needs every workspace member's manifest to resolve, even ones not installed here.
-RUN mkdir -p packages/shared-schemas/python/arco_schemas services/blackboard/arco_blackboard services/agents/arco_agents services/edge-capture/arco_edge services/base-station/arco_base \
+RUN mkdir -p packages/shared-schemas/python/arco_schemas services/blackboard/arco_blackboard services/agents/arco_agents services/edge-capture/arco_edge services/base-station/arco_base services/benchmark/arco_benchmark \
  && touch packages/shared-schemas/python/arco_schemas/__init__.py \
           services/blackboard/arco_blackboard/__init__.py \
           services/agents/arco_agents/__init__.py \
           services/edge-capture/arco_edge/__init__.py \
-          services/base-station/arco_base/__init__.py
+          services/base-station/arco_base/__init__.py \
+          services/benchmark/arco_benchmark/__init__.py
 RUN uv sync --frozen --no-dev --package arco-blackboard
 
 # Sources.

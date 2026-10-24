@@ -16,11 +16,11 @@ and an offline community mesh. See `PROJECT_SPEC.md` for the full specification 
   `brew install colima docker docker-compose && colima start`
 - GNU make
 
-## Quick start (Phases 1–4)
+## Quick start (Phases 1–5)
 
 ```bash
 make bootstrap          # uv sync, pnpm install, .env, pre-commit hooks
-docker compose up -d --wait   # postgres+redis, migrate one-shot, blackboard :8001, base-station :8002, agents :8003
+docker compose up -d --wait   # postgres+redis, migrate one-shot, blackboard :8001, base-station :8002, agents :8003, benchmark :8005
 make healthcheck        # containers healthy, extensions present, Redis PONG, every /health ok
 make ingest-sample      # Lahaina OSM road graph (offline sample) -> road_edges
 curl "localhost:8001/edges?bbox=-156.7,20.86,-156.66,20.9" | head -c 300
@@ -32,6 +32,8 @@ make test-split         # Phase 4 ONNX split / INT8 / packet codec / no-raw-fram
 make test-vision-e2e    # Phase 4 frame -> base station -> PostGIS hazard row + telemetry (needs DB)
 make run-edge FRAMES=25 # synthetic edge node against the compose base station (ARCO_DETECTOR=synthetic)
 make export-split WEIGHTS=models/yolov8n-seg.pt   # real model: head_int8 + tail + manifest (needs --extra export)
+make bench              # Phase 5 FP32 full vs INT8 split on identical frames -> JSON/CSV (needs the model)
+make bench-show         # table of the committed recorded run (M1 Pro CPU: both miss 80 ms/30 fps, tail-bound)
 make schemas            # regenerate JSON Schema + TS types from Pydantic
 make schemas-check      # fail if generated files are stale
 ```
@@ -53,7 +55,8 @@ services/blackboard/       PostGIS schema, Alembic migrations, event bus, spatia
 services/agents/           LangGraph Cartographer + Navigator, penalties.yaml, explainer (SLM optional)
 services/edge-capture/     ONNX split + INT8 head, feature-packet codec, frame sources, edge node
 services/base-station/     tail inference, seg postprocess, class map, georef, hazard writer, telemetry API
-services/{simulator,benchmark}/   (later phases)
+services/benchmark/        A-vs-B harness, pacing/drop model, HardwareInfo, recorded replay on :8005
+services/simulator/        (Phase 7)
 apps/{dashboard,mobile}/   Next.js dashboard, Expo community app (later phases)
 data/{scenarios,samples}/  scenario JSON + small sample assets (vision georefs under samples/vision)
 models/                    exported ONNX heads/tails + manifest.json (gitignored; make export-split)

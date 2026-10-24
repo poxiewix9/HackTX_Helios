@@ -1,7 +1,7 @@
 /* eslint-disable */
 /**
  * GENERATED FILE - DO NOT EDIT.
- * Source: packages/shared-schemas/schema/arco.schema.json (schema version 0.2.1)
+ * Source: packages/shared-schemas/schema/arco.schema.json (schema version 0.2.2)
  * Regenerate with `make schemas`.
  */
 
@@ -624,7 +624,7 @@ export interface TelemetrySample {
   frame_id: number;
   gpu_percent?: number | null;
   mode: "live" | "recorded";
-  pipeline: "fp32_full" | "int8_split";
+  pipeline: "fp32_full" | "int8_split" | "synthetic";
   rss_mb?: number | null;
   scenario_t?: number | null;
   /**
@@ -691,9 +691,13 @@ export interface BenchmarkResult {
   p50_ms: number;
   p95_ms: number;
   peak_rss_mb?: number | null;
-  pipeline: "fp32_full" | "int8_split";
+  pipeline: "fp32_full" | "int8_split" | "synthetic";
   run_id: string;
   started_at: string;
+  /**
+   * Stream the run was measured on; None = aggregated
+   */
+  stream?: ("macro" | "micro") | null;
   target_fps?: number;
   target_ms?: number;
   total_bytes_sent: number;

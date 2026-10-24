@@ -9,3 +9,4 @@ uv.lock
 packages/shared-schemas/schema/**
 data/**
 *.md
+services/benchmark/recorded/

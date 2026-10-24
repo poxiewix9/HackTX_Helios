@@ -5,7 +5,7 @@ SHELL := /bin/bash
 UV      ?= uv
 PNPM    ?= pnpm
 COMPOSE ?= docker compose
-PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents services/edge-capture services/base-station scripts/export_split.py scripts/finetune.py
+PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents services/edge-capture services/base-station services/benchmark scripts/export_split.py scripts/finetune.py
 
 # Load .env if present so DATABASE_URL etc. are available to host-side commands.
 ifneq (,$(wildcard .env))
@@ -61,6 +61,7 @@ lint-py:
 	$(UV) run mypy services/agents
 	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
 	$(UV) run mypy services/base-station
+	$(UV) run mypy services/benchmark
 
 .PHONY: lint-ts
 lint-ts:
@@ -79,6 +80,7 @@ typecheck: ## mypy + tsc only
 	$(UV) run mypy services/agents
 	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
 	$(UV) run mypy services/base-station
+	$(UV) run mypy services/benchmark
 	$(PNPM) typecheck
 
 .PHONY: test
@@ -138,6 +140,25 @@ serve-base-station: ## Run the base station host-side (:8002)
 .PHONY: run-edge
 run-edge: ## Run the edge node host-side against ARCO_BASE_STATION_URL (FRAMES=N to stop)
 	cd services/edge-capture && $(UV) run python -m arco_edge.main $(if $(FRAMES),--frames $(FRAMES),)
+
+# ---------------------------------------------------------------------------
+# Benchmark (Phase 5)
+# ---------------------------------------------------------------------------
+.PHONY: bench
+bench: ## FP32 full vs INT8 split on identical frames -> JSON + CSV (needs models/<id>/manifest.json; FRAMES, PACE_FPS, RECORD=1)
+	$(UV) run arco-bench run --frames $(or $(FRAMES),60) --pace-fps $(or $(PACE_FPS),30) $(if $(RECORD),--record,) --out services/benchmark/results
+
+.PHONY: bench-show
+bench-show: ## Print the newest recorded run (or FILE=path)
+	$(UV) run arco-bench show $(or $(FILE),$(shell ls -t services/benchmark/recorded/*.json | head -1))
+
+.PHONY: test-benchmark
+test-benchmark: ## Benchmark unit tests (+ a short real run when model files exist)
+	$(UV) run pytest services/benchmark/tests -q -p no:cacheprovider -s
+
+.PHONY: serve-benchmark
+serve-benchmark: ## Telemetry WS :8005 replaying the newest recorded run (POST /run for a live one)
+	cd services/benchmark && $(UV) run arco-bench serve --port $${BENCHMARK_PORT:-8005}
 
 # ---------------------------------------------------------------------------
 # Agents service (host side)

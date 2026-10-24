@@ -188,5 +188,35 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Benchmark telemetry: replays the committed recorded run (labelled RECORDED) on :8005 for
+  # the dashboard's FP32-vs-split strip; POST /run starts a LIVE run when ./models has a manifest.
+  benchmark:
+    build:
+      context: .
+      dockerfile: services/benchmark/Dockerfile
+    container_name: arco-benchmark
+    environment:
+      BENCHMARK_PORT: 8005
+      ARCO_MODELS_DIR: /app/models
+      ARCO_MODEL_ID: ${ARCO_MODEL_ID:-yolov8n-seg}
+      ARCO_BENCH_REPLAY_SPEED: ${ARCO_BENCH_REPLAY_SPEED:-1.0}
+    volumes:
+      - ./models:/app/models:ro
+    ports:
+      - "${BENCHMARK_PORT:-8005}:8005"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8005/health', timeout=3); sys.exit(0 if r.status==200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
 volumes:
   pgdata:

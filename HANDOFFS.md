@@ -10,7 +10,10 @@ Append; never rewrite history.
 - 2026-10-24 agents → architect — **APPLIED** (schema 0.2.1): `RoadEdge.capacity_factor: float = 1.0` (0 < x ≤ 1), the Cartographer's
   capacity reduction for `crowd_bottleneck` so the Navigator's congestion term sees it without a side channel. Blackboard column +
   migration `0003_edge_capacity_factor`, `convert` round-trip, `make schemas` regenerated (JSON + TS). Non-breaking (default 1.0).
-- 2026-10-24 vision → architect — **REQUESTED**: `PipelineKind` currently is `Literal["fp32_full", "int8_split"]`. The base station
+- 2026-10-24 vision → architect — **APPLIED** (schema 0.2.2): `PipelineKind += "synthetic"`; `BenchmarkResult.stream: StreamKind | None = None`
+  (benchmark measures per stream). Non-breaking; `make schemas` regenerated JSON + TS; base station now labels the synthetic detector's
+  telemetry `pipeline="synthetic"`. Original request kept below for the record.
+- 2026-10-24 vision → architect — (superseded, applied above) `PipelineKind` currently is `Literal["fp32_full", "int8_split"]`. The base station
   runs the synthetic detector through the split topology and has to label its `TelemetrySample.pipeline` as `int8_split`; the
   `detector="synthetic"` field on `DetectionsMessage` / `/health` is the honest label today. Proposal (non-breaking): add
   `"synthetic"` to `PipelineKind` so the dashboard can badge telemetry without joining it to the detections stream. Alternative:
@@ -181,3 +184,32 @@ Known limitations:
   - One hazard row per `source_id:class` (no per-instance tracking); `capture_ms` not transmitted; telemetry `pipeline` cannot say
     `synthetic` until the contract changes.
   - `edge-capture` in compose uses the synthetic source; a real camera needs the host (device passthrough is not available under Colima).
+
+### [benchmark -> reviewer, dashboard] 2026-10-24 21:40  5.1
+What I built: `services/benchmark` (`arco_benchmark`) — `FullPipeline` (JPEG q90 → unsplit FP32) vs `SplitPipeline` (INT8 head →
+feature packet → FP32 tail) on identical seeded frames, `run_pipeline` with an explicit no-queue pacing/drop model, `summarize` →
+`BenchmarkResult` (verdict rule `mean ≤ 80 ms ∧ fps ≥ 30`, bottleneck named when missed), `HardwareInfo` read from the OS,
+JSON + CSV writer, recorded replay (`mode="recorded"`), `arco-bench run|show|replay|serve`, FastAPI :8005 (`/health`, `/runs`,
+`/results`, `/ws/telemetry`, `POST /run`, `POST /replay/{id}`), compose `benchmark` service, committed recorded run
+`services/benchmark/recorded/20261024T212059Z-b8ae37.json` (M1 Pro CPU).
+How to run/test:
+  make bench [FRAMES=60 PACE_FPS=30 RECORD=1]      # needs models/<id>/manifest.json
+  make bench-show                                   # table of the committed run
+  make test-benchmark                               # 8 tests (fake clock + real short run when models exist)
+  docker compose up -d --wait benchmark && websocat ws://localhost:8005/ws/telemetry
+Interfaces I expose / changed:
+  - `/ws/telemetry` on :8005 carries `TelemetryChannelMessage` = `telemetry.benchmark{result}` then `telemetry.sample{sample}`;
+    `sample.mode` / `result.mode` is `recorded` for replays and `live` during `POST /run`. Badge it exactly.
+  - `BenchmarkResult.stream` (schema 0.2.2) distinguishes micro/macro rows; `hardware` is inside every result.
+  - Python: `arco_benchmark.runner.{run_pipeline, summarize, compare}`, `arco_benchmark.report.{BenchmarkRun, write_run, load_run}`,
+    `arco_benchmark.replay.iter_replay`, `arco_benchmark.hardware.read_hardware`.
+What I need from you:
+  - Reviewer: `/review` 5.1. Check the drop model against the test (`test_paced_run_drops_arrivals_missed_while_busy`) and that no
+    number in the README is typed rather than copied from the recorded run file.
+  - Dashboard (8.3): telemetry strip = two traces (`fp32_full`, `int8_split`) from :8005; show `hardware.cpu`/`gpu` next to the badge;
+    with the backend down, the committed `recorded/*.json` can be bundled as the offline fallback (it is 136 kB).
+Known limitations:
+  - `network` stage is 0 (single process). CPU/GPU utilisation is this process's `cpu_percent`, not system-wide; GPU % is None (no GPU EP).
+  - On the dev machine both pipelines miss the target and the split is not meaningfully faster — recorded and documented, not tuned away.
+    A GPU tail / deeper cut is the obvious next experiment; the harness needs no change for it (`--providers`, `make export-split SPLIT_INDEX=`).
+  - Synthetic frames: timings are real, detections are not meaningful; `--source` accepts real footage.

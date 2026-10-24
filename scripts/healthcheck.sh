@@ -92,6 +92,23 @@ else
   fi
 fi
 
+echo "== benchmark api =="
+bm_port="${BENCHMARK_PORT:-8005}"
+if [[ "$(status benchmark)" == "" ]]; then
+  echo "  not running (optional; start with: docker compose up -d benchmark)"
+else
+  for _ in $(seq 1 30); do
+    [[ "$(status benchmark)" == "healthy" ]] && break
+    sleep 2
+  done
+  if body="$(curl -fsS "http://localhost:${bm_port}/health" 2>/dev/null)"; then
+    echo "  $body" | cut -c1-300
+    echo "$body" | grep -q '"status":"ok"' || { echo "  status not ok"; fail=1; }
+  else
+    echo "  GET /health failed on port ${bm_port}"; fail=1
+  fi
+fi
+
 echo "== agents api =="
 ag_port="${AGENTS_PORT:-8003}"
 if [[ "$(status agents)" == "" ]]; then

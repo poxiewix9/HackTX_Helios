@@ -13,9 +13,9 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 | 2.3  | blackboard | 2.1        | OSMnx ingestion                               | `make ingest-sample && make test`                 | DONE        | see log 2.3 |
 | 3.1  | agents     | 2.2,2.3    | Cartographer                                  | `make test-cartographer`                          | DONE        | see log 3.1 |
 | 3.2  | agents     | 3.1        | Navigator + crowd dispersal                   | `make test-navigator`                             | DONE        | see log 3.2 |
-| 4.1  | vision     | 1.2        | Export, split, quantize                       | `make test-split`                                 | IN_REVIEW   | see log 4.1 |
-| 4.2  | vision     | 4.1,2.2    | Edge capture + base station + georef          | `make test-vision-e2e`                            | IN_REVIEW   | see log 4.2 |
-| 5.1  | benchmark  | 4.2        | FP32 vs split benchmark + recorded replay     | `make bench`                                      | TODO        |          |
+| 4.1  | vision     | 1.2        | Export, split, quantize                       | `make test-split`                                 | DONE        | see log 4.1 |
+| 4.2  | vision     | 4.1,2.2    | Edge capture + base station + georef          | `make test-vision-e2e`                            | DONE        | see log 4.2 |
+| 5.1  | benchmark  | 4.2        | FP32 vs split benchmark + recorded replay     | `make bench`                                      | IN_REVIEW        | see log 5.1 |
 | 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | TODO        |          |
 | 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | TODO        |          |
 | 7.2  | simulator  | 7.1        | Lahaina, Joplin, Camp Fire scenarios          | `make validate-scenarios`                         | TODO        |          |
@@ -32,6 +32,7 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 - Phase 1 — 2026-10-24 — gate: `make lint`, `make schemas-check`, `make test`, `docker compose up -d && make healthcheck` all green; 1.1-1.3 DONE (user said "continue"). Commit `de817c8`.
 - Phase 2 — 2026-10-24 — gate: `make lint`, `make test` (62 py + 14 ts), `make test-blackboard-all` (35), `docker compose up -d --wait && make healthcheck`, `make ingest-sample` all green; 2.1-2.3 DONE (user said "continue"). Commit `386e819`.
 - Phase 3 — 2026-10-24 — gate: `make lint`, `make test` (92 py + 14 ts), `make test-cartographer` (15), `make test-navigator` (15), `docker compose up -d --wait && make healthcheck`, live hazard → sever → reroute → `/ws/routes` verified; 3.1-3.2 DONE (user said "continue"). Commits `cea1819`, `ed2358c`.
+- Phase 4 — 2026-10-24 — gate: `make lint`, `make test` (127 py + 14 ts), `make test-split` (24), `make test-vision-e2e` (11), `make schemas-check`, `docker compose up -d --wait && make healthcheck` (base-station added), live edge → base → PostGIS → agents reroute verified; 4.1-4.2 DONE (user said "continue", and asked to run phases 5-10 in succession without further gates — Orchestrator applies the gate checks itself at each phase end). Commit `a152fd4`.
 
 ## Task logs
 (Agents append: iteration count, commands run, last output lines, root causes found.)
@@ -202,3 +203,24 @@ $ make lint   -> ruff clean, all files formatted, mypy: 30 + 19 + 15 + 13 source
 $ make test   -> 127 passed (pytest) / Test Files 2 passed, Tests 14 passed (vitest)
 $ make healthcheck -> postgres/redis/blackboard/base-station/agents all ok: healthcheck: OK
 ```
+
+### 5.1 benchmark — 2026-10-24 — 3 iterations
+- it1: first design had `BenchmarkResult` per pipeline only, but the harness measures per stream and the contract had no `stream` field → Architect applied schema 0.2.2: `BenchmarkResult.stream: StreamKind | None` and `PipelineKind += "synthetic"` (the base station was labelling the synthetic detector `int8_split`; now `synthetic`). `make schemas` regenerated; base-station e2e test updated to the honest label.
+- it2: pacing/drop model was off by one slot (counted the frame being processed as dropped) → rewritten as "arrivals that passed while busy = `ceil((now − next_arrival)/period)`", exact under a fake clock (70 ms work @ 30 fps → precisely 2 drops/frame, 10 fps).
+- it3: mypy: `max(dict, key=...)` typed the bottleneck as `Stage | None`; `opencv` `imdecode` may return None; pydantic `default_factory` for `list[StreamKind]` → typed helpers, explicit None check. Docker build hit a full host disk again (Colima image I/O errors) → purged pip/npm/brew download caches (~6 GB), restarted Colima, pruned images; container builds fine afterwards.
+```
+$ make bench RECORD=1
+run 20261024T212059Z-b8ae37  model yolov8n-seg@full_fp32 vs yolov8n-seg@head_int8 -> yolov8n-seg@tail_fp32  frames synthetic:0  paced 30.0 fps
+hardware: Apple M1 Pro x8, 16.0 GB, gpu=none used, ort=CPUExecutionProvider, Darwin 25.5.0 (arm64), py3.11.14
+pipeline   stream    n drop    mean     p50     p95    fps   kB/f    rss  target  bottleneck
+fp32_full  micro    60  120    69.2    66.8    78.1    9.9  108.0    266  MISSED  tail
+int8_split micro    60  119    68.3    65.9    83.1   10.0  127.6    360  MISSED  tail
+fp32_full  macro    60  116    69.6    68.2    80.4   10.1  123.1    397  MISSED  tail
+int8_split macro    60  118    68.7    67.2    75.8   10.0  209.7    396  MISSED  tail
+micro: split FASTER (mean 69.22 -> 68.303 ms, x1.013), bandwidth 110615 -> 130622 B/frame (x0.85), target MISSED, bottleneck=tail
+wrote services/benchmark/results/20261024T212059Z-b8ae37/{run.json,summary.csv,samples.csv}; recorded -> services/benchmark/recorded/20261024T212059Z-b8ae37.json
+$ make test-benchmark   -> 8 passed (incl. real short run: fp32 73.7 ms vs split 71.8 ms, MISSED, bottleneck tail)
+$ docker compose up -d --wait benchmark && curl :8005/health -> replay_run_id=20261024T212059Z-b8ae37, replay_hardware=Apple M1 Pro; /ws/telemetry frames: telemetry.sample seq 96..98 mode=recorded
+$ make lint -> clean (mypy 30+19+15+13+12 files); make test -> 135 passed / 14 vitest
+```
+Honest result: on this CPU-only machine **both pipelines miss** 80 ms / 30 fps; bottleneck is the FP32 tail (~57–61 ms) in both; the split is ~1 % faster; its packet is *larger* than JPEG q90 at this cut (128 kB vs 108 kB). Written as such in `services/benchmark/README.md` and ARCHITECTURE. The harness reports the bottleneck instead of hiding it, as the spec requires.

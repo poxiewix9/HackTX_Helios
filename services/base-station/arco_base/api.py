@@ -35,6 +35,7 @@ from arco_edge.logging import configure_logging, get_logger
 from arco_edge.packet import decode
 from arco_schemas import DetectionsMessage, TelemetryMessage
 from arco_schemas.telemetry import PipelineKind
+from arco_schemas.vision import DetectorKind
 
 log = get_logger("base.api")
 
@@ -97,6 +98,13 @@ class Broadcaster:
             self._queues.discard(q)
 
 
+_PIPELINE_FOR: dict[DetectorKind, PipelineKind] = {
+    "onnx_split": "int8_split",
+    "onnx_full": "fp32_full",
+    "synthetic": "synthetic",
+}
+
+
 @dataclass
 class Runtime:
     settings: BaseStationSettings
@@ -133,7 +141,7 @@ class Runtime:
             "db_write": wr.db_write_ms,
             **det.stage_ms,
         }
-        pipeline: PipelineKind = "int8_split" if self.detector.kind != "onnx_full" else "fp32_full"
+        pipeline: PipelineKind = _PIPELINE_FOR[self.detector.kind]
         sample = self.hub.record(
             stream=h.stream,
             pipeline=pipeline,

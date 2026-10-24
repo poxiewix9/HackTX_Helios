@@ -120,6 +120,7 @@ Pydantic models (python/arco_schemas/*.py)
 | base-station   | 8002 | Tail inference, georef, `/ws/detections`, `/ws/telemetry`          |
 | agents         | 8003 | Cartographer / Navigator / Consensus, `/ws/routes`                 |
 | simulator      | 8004 | Scenario clock, hazard injection, chaos                            |
+| benchmark      | 8005 | FP32-vs-split results + `/ws/telemetry` (LIVE run or RECORDED replay) |
 | dashboard      | 3000 | Next.js UI                                                         |
 
 ## Phase status
@@ -129,8 +130,9 @@ Pydantic models (python/arco_schemas/*.py)
 | 1     | Scaffold, schemas, compose, migrations, CI | **done** |
 | 2     | Blackboard tables, events, API, OSMnx   | **done** (see "Blackboard internals") |
 | 3     | Cartographer + Navigator (deterministic), SLM behind an interface | **done** (see "Agents internals") |
-| 4     | Split-inference vision: ONNX split + INT8 head, edge-capture, base-station (georef, telemetry, synthetic fallback) | **built, in review** (see "Vision internals") |
-| 5-10  | see `PROJECT_SPEC.md` §8                | pending     |
+| 4     | Split-inference vision: ONNX split + INT8 head, edge-capture, base-station (georef, telemetry, synthetic fallback) | **done** (see "Vision internals") |
+| 5     | Benchmark harness: A vs B on identical frames, JSON/CSV, hardware from the machine, recorded replay | **built, in review** (see "Benchmark internals") |
+| 6-10  | see `PROJECT_SPEC.md` §8                | pending     |
 
 ## Blackboard internals (Phase 2)
 
@@ -251,6 +253,34 @@ Pydantic models (python/arco_schemas/*.py)
   reduces bandwidth and edge load but **not** base-station compute; Phase 5 benchmarks it
   per hardware and reports whichever stage is the bottleneck.
 
+## Benchmark internals (Phase 5)
+
+- **Same frames, same process, same clock.** `arco_benchmark.pipelines.FullPipeline`
+  (JPEG q90 encode → decode → unsplit FP32 → postprocess → georef) and `SplitPipeline`
+  (INT8 head → `encode` → `decode` → FP32 tail → postprocess → georef) consume the same
+  seeded `Frame`s. Both report all nine contract stages; `network` is 0 for both because
+  nothing crosses a socket — it is a compute + codec comparison, stated in every run file.
+- **Pacing / drops.** `run_pipeline(pace_fps=30)` models an input arriving every 1/30 s
+  into a pipeline with no queue: each arrival instant that passes while busy is a dropped
+  frame (counted, never processed); a fast pipeline sleeps until the next slot. `pace_fps=None`
+  is pure throughput. `fps` is processed frames / measured wall time after warm-up.
+- **Verdict rule.** `meets_target = mean_ms ≤ 80 ∧ fps ≥ 30`; when missed,
+  `bottleneck_stage` is the slowest mean stage. Nothing rounds in the target's favour.
+- **Hardware** is `HardwareInfo` read from the OS (CPU brand via `sysctl` /
+  `/proc/cpuinfo`, RAM, cores, the ORT providers the sessions actually ran with; GPU only
+  when a GPU provider is active). It travels inside every `BenchmarkResult`.
+- **Files.** `results/<run_id>/{run.json, summary.csv, samples.csv}`; `--record` copies
+  the run to `services/benchmark/recorded/` (committed). `arco-bench serve` / compose
+  `benchmark` (:8005) replays the newest recorded run on `/ws/telemetry` with
+  `mode="recorded"`, and `POST /run` streams a live run (`mode="live"`) when model files
+  exist — otherwise `409`, never a fake.
+- **Result on the dev machine** (M1 Pro, CPU EP, yolov8n-seg, cut after `/model.3`,
+  30 fps paced): A 69.2 ms / 9.9 fps, B 68.3 ms / 10.0 fps, both **miss** the target,
+  bottleneck = FP32 tail (~57–61 ms) in both; the feature packet (128 kB micro) is
+  *larger* than the JPEG (108 kB) at this cut. The split's measurable win on this
+  hardware is privacy and edge-offload flexibility, not latency or bandwidth. Details and
+  the reasoning in `services/benchmark/README.md`.
+
 ## Limitations (honest list, kept current)
 
 - **Dispersal is static.** Frank–Wolfe over k candidate paths with BPR congestion is a
@@ -270,7 +300,11 @@ Pydantic models (python/arco_schemas/*.py)
   `ARCO_DETECTOR` selects them.
 - **Benchmark numbers are hardware-specific.** The harness reports the machine it ran on;
   recorded runs are labelled `RECORDED`. If the 80 ms / 30 FPS target is missed, the
-  bottleneck stage is reported instead of hidden.
+  bottleneck stage is reported instead of hidden — and on the CPU-only dev machine it
+  **is** missed by both pipelines (see "Benchmark internals"); the split is not faster
+  there, and its packet is larger than a JPEG at the chosen cut.
+- **Benchmark `network` stage is 0.** Both pipelines run in one process; link latency is
+  measured by the live base-station telemetry, not by the harness.
 - **Mesh transports.** iOS restricts background BLE advertising and does not expose
   Wi-Fi Direct; `BleTransport` / `WifiDirectTransport` are best-effort. The demo uses
   `SimulatedMeshTransport`, which is clearly labelled.
