@@ -1,0 +1,125 @@
+# Cartographer penalty policy, keyed by `HazardClass` values from arco_schemas.
+#
+# For every (hazard, edge) overlap the Cartographer computes:
+#
+#   f   = overlap_fraction         # metres of edge inside the hazard / edge length (0..1)
+#   c   = hazard.confidence         # detector / consensus confidence (0..1)
+#   s   = hazard.severity           # 0..1
+#   w   = f * c                     # "how sure are we this edge is affected"
+#
+# and applies the class policy:
+#
+#   ignore     if c < min_confidence                      (too uncertain to act)
+#   sever      if action == sever   and f >= sever_fraction and c >= sever_confidence
+#   penalize   otherwise (for sever/penalize classes):
+#                multiplier = 1 + (max_multiplier - 1) * w * (0.5 + 0.5 * s)
+#              so a fully overlapped, fully confident, max-severity hazard yields
+#              max_multiplier; low overlap or low confidence shrink it toward 1.
+#   capacity   (crowd_bottleneck): capacity_estimate is scaled by
+#                capacity_factor ** w   -> the Navigator's congestion term does the rest;
+#              cost multiplier is also raised by the (smaller) penalize formula.
+#
+# When several hazards touch one edge the edge is `severed` if ANY link severs, else its
+# multiplier is the MAX over links (not the product: two detections of the same fire
+# should not double-penalize). current_cost = base_cost * multiplier, always finite.
+#
+# Expanding hazards (fire, flood, smoke) are buffered before the overlap query:
+#
+#   buffer_m = min(max_buffer_m,
+#                  base_margin_m + velocity_m_s * (horizon_s + elapsed_s))
+#
+# where elapsed_s is scenario time since `last_seen` (0 for a fresh event) and
+# horizon_s is how far ahead we want roads closed *before* the front reaches them.
+# If velocity_m_s is unknown, default_velocity_m_s for the class is used.
+
+defaults:
+  min_confidence: 0.35
+  sever_fraction: 0.15 # 15 % of the edge inside the hazard is enough to cut it
+  sever_confidence: 0.6
+  max_multiplier: 4.0
+  capacity_factor: 1.0
+  buffer:
+    base_margin_m: 10.0
+    horizon_s: 300.0 # close roads the front will reach within 5 minutes
+    max_buffer_m: 400.0
+    default_velocity_m_s: 0.0
+
+classes:
+  fire_front:
+    action: sever
+    sever_fraction: 0.05 # any real contact with an active flame front is impassable
+    sever_confidence: 0.5
+    max_multiplier: 8.0
+    buffer:
+      base_margin_m: 30.0
+      horizon_s: 300.0
+      max_buffer_m: 600.0
+      default_velocity_m_s: 0.8 # Lahaina 2023: ~1 mile in ~20-30 min on the front
+  smoke:
+    action: penalize
+    min_confidence: 0.4
+    max_multiplier: 3.0 # smoke slows but does not block; visibility risk
+    buffer:
+      base_margin_m: 20.0
+      horizon_s: 120.0
+      max_buffer_m: 300.0
+      default_velocity_m_s: 0.5
+  flood_water:
+    action: sever
+    sever_fraction: 0.1
+    sever_confidence: 0.6
+    max_multiplier: 6.0
+    buffer:
+      base_margin_m: 15.0
+      horizon_s: 600.0
+      max_buffer_m: 400.0
+      default_velocity_m_s: 0.1
+  collapsed_building:
+    action: penalize
+    max_multiplier: 3.0 # debris spill-over onto the adjacent road
+  tornado_swath:
+    action: sever
+    sever_fraction: 0.2
+    sever_confidence: 0.6
+    max_multiplier: 6.0
+  blocked_road:
+    action: sever
+    sever_fraction: 0.1
+    sever_confidence: 0.55
+    max_multiplier: 6.0
+  debris:
+    action: penalize
+    max_multiplier: 2.5
+  flooded_road:
+    action: sever
+    sever_fraction: 0.1
+    sever_confidence: 0.6
+    max_multiplier: 6.0
+    buffer:
+      base_margin_m: 10.0
+      horizon_s: 300.0
+      max_buffer_m: 200.0
+      default_velocity_m_s: 0.05
+  fire:
+    action: sever
+    sever_fraction: 0.05
+    sever_confidence: 0.55
+    max_multiplier: 8.0
+    buffer:
+      base_margin_m: 20.0
+      horizon_s: 240.0
+      max_buffer_m: 400.0
+      default_velocity_m_s: 0.5
+  crowd_bottleneck:
+    action: capacity
+    min_confidence: 0.4
+    max_multiplier: 2.0
+    capacity_factor: 0.35 # a confirmed bottleneck leaves ~35 % of nominal throughput
+  vehicle_blockage:
+    action: penalize
+    max_multiplier: 3.5
+  downed_line:
+    action: sever
+    sever_fraction: 0.02 # a live wire anywhere on the segment makes it unsafe
+    sever_confidence: 0.6
+    max_multiplier: 8.0

@@ -7,7 +7,9 @@ Append; never rewrite history.
 (none)
 
 ## CONTRACT CHANGE REQUESTS (to Architect)
-(none)
+- 2026-10-24 agents → architect — **APPLIED** (schema 0.2.1): `RoadEdge.capacity_factor: float = 1.0` (0 < x ≤ 1), the Cartographer's
+  capacity reduction for `crowd_bottleneck` so the Navigator's congestion term sees it without a side channel. Blackboard column +
+  migration `0003_edge_capacity_factor`, `convert` round-trip, `make schemas` regenerated (JSON + TS). Non-breaking (default 1.0).
 
 ## HANDOFFS
 
@@ -74,3 +76,42 @@ Known limitations:
   - WS fan-out is single-process (one subscription per API process); fine for the demo, not for horizontal scaling.
   - Lahaina sample is present-day OSM geometry (may differ from Aug 2023); scenario files must say so.
   - `make schemas-check` compares against the git index, so it reports "stale" while the regenerated files are uncommitted — it is clean after commit.
+
+### [agents -> reviewer, simulator, dashboard, mobile] 2026-10-24 16:35  3.1, 3.2
+What I built: `services/agents` — `penalties.yaml` policy (all 12 HazardClass values, math in comments) + `Cartographer`
+(buffer → overlap → sever/penalize/capacity → `apply_edge_updates`, recomputed from links on apply/release/expire/regrow);
+`Navigator` (NetworkX mirror, A*, k-diverse paths, Frank–Wolfe crowd dispersal with BPR congestion, integer crowd groups,
+measured `compute_ms`, edge loads written back); `Explainer` protocol (deterministic template / Ollama SLM with fallback /
+cache); LangGraph pipeline with per-node fault isolation; `AgentsRuntime` (bus consumer + tick) and FastAPI on :8003 with
+`/ws/routes`; compose `agents` service; demo population file `data/samples/lahaina/demo_population.json`
+("Simulated on real event geometry", approximate). Plus blackboard additions listed below.
+How to run/test:
+  docker compose up -d --wait && make healthcheck
+  make test-cartographer && make test-navigator        (or make test-agents)
+  websocat ws://localhost:8003/ws/routes   # then POST a hazard to :8001 and watch routes.updated
+Interfaces I expose / changed:
+  - REST :8003: `GET /health` (graph_version, routes, last_compute_ms, last_max_edge_load_ratio, recent_errors), `GET /routes`,
+    `GET /agent-events?agent=&limit=`, `POST /navigator/population` (Scenario or {population_cells, safe_zones}),
+    `POST /navigator/recompute`; `WS /ws/routes` streams `routes.updated` + `agent.event` messages (same JSON as the blackboard WS).
+  - Bus: consumes `hazard.*`, `graph.updated`, `edge.updated`, `clock.*`; produces `edge.updated`/`graph.updated` (via blackboard
+    service), `routes.updated{trigger, compute_ms, max_edge_load_ratio}`, `agent.event` kinds `hazard.applied[.noop]`,
+    `hazard.resolved`, `hazard.expired`, `routes.recomputed[.overload]`.
+  - Blackboard (schema 0.2.1 / migration 0003): `RoadEdge.capacity_factor`; `BlackboardService.apply_edge_updates(..., capacity_factors=)`,
+    `links_for_hazard(id)`, `links_for_edges(ids)`; `Settings.arco_bus_prefix` (`ARCO_BUS_PREFIX`) threaded through
+    `Publisher`/`RedisSubscriber`; `arco_blackboard.testing` (`use_test_database`, `truncate_all`, `reset_edges`, `make_hazard`, `square`).
+  - Python: `arco_agents.penalties.PenaltyPolicy`, `arco_agents.cartographer.Cartographer`, `arco_agents.navigator.Navigator`,
+    `arco_agents.explain.{Explainer, DeterministicExplainer, SlmExplainer, CachedExplainer}`, `arco_agents.pipeline.Pipeline`.
+  - Test isolation: every suite now runs in `<db>_test` + Redis prefix `blackboard-test.`; `make test` no longer wipes the dev DB.
+What I need from you:
+  - Reviewer: `/review` 3.1, 3.2 (and the blackboard additions); move 3.1/3.2 to DONE if green.
+  - Simulator (7.1): drive hazards with `POST :8001/hazards?scenario_t=` and publish `clock` events; the Navigator reads the
+    population/safe zones from the scenario file (`ARCO_POPULATION_PATH`) or `POST :8003/navigator/population`.
+  - Dashboard (8.1): subscribe to `ws://…:8003/ws/routes` (or blackboard WS topics `routes`,`agent`); `Route.explanation_source`
+    tells you whether text is SLM or template; `road_edges.current_load` + `capacity_factor` are there for load colouring.
+  - Mobile (9.1): `Route.instruction` is the one-liner to show; `path` is a LineString; `version` per `crowd_group_id`.
+  - Agents 6.1 / 10.1 (future me): Consensus goes in front of `Cartographer.on_hazard_event`; the SLM slot is `SlmExplainer`.
+Known limitations:
+  - Dispersal is a static Frank–Wolfe assignment, not a time-expanded simulation; overload is flagged not solved.
+  - Population cells snap to the nearest node; the demo population is approximate.
+  - SLM path is implemented and unit-tested for fallback, but not exercised against a running Ollama here.
+  - `graph_edges` in `/health` is the mirror's edge count (parallel edges collapsed), not `road_edges` row count.

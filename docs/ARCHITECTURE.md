@@ -128,7 +128,8 @@ Pydantic models (python/arco_schemas/*.py)
 |-------|-----------------------------------------|-------------|
 | 1     | Scaffold, schemas, compose, migrations, CI | **done** |
 | 2     | Blackboard tables, events, API, OSMnx   | **done** (see "Blackboard internals") |
-| 3-10  | see `PROJECT_SPEC.md` §8                | pending     |
+| 3     | Cartographer + Navigator (deterministic), SLM behind an interface | **built, in review** (see "Agents internals") |
+| 4-10  | see `PROJECT_SPEC.md` §8                | pending     |
 
 ## Blackboard internals (Phase 2)
 
@@ -157,7 +158,56 @@ Pydantic models (python/arco_schemas/*.py)
   (`data/samples/osm/lahaina_drive.graphml`, OSM/ODbL, 266 nodes / 637 edges) makes
   tests and the demo offline.
 
+## Agents internals (Phase 3)
+
+- **Event-driven LangGraph pipeline** (`arco_agents.pipeline`): one `StateGraph` run per
+  `BusEnvelope`; `route` → `cartographer` (hazard topics) → `navigator` (graph/edge
+  topics). Each node is wrapped so an exception is logged + recorded in
+  `recent_errors` and never stops the consumer; graph versions already routed are skipped.
+- **Cartographer** = policy, not model: `config/penalties.yaml` is keyed by
+  `HazardClass` with the math in comments. Per overlap `w = f·c`; ignore below
+  `min_confidence`; sever when `f ≥ sever_fraction ∧ c ≥ sever_confidence`; else
+  `current_cost = base_cost·(1 + (max_multiplier−1)·w·(0.5+0.5·s))`; `crowd_bottleneck`
+  scales capacity by `capacity_factor^w`. Several hazards on one edge: any-sever / MAX
+  multiplier / MIN capacity, recomputed from `edge_hazard_links` on apply, release, TTL
+  expiry and buffer regrow. Expanding hazards are buffered
+  `min(max_buffer_m, base_margin_m + v·(horizon_s+elapsed_s))` in a metric (AEQD)
+  projection before `edges_intersecting`.
+- **Blackboard contract additions** (schema 0.2.1, migration `0003`):
+  `RoadEdge.capacity_factor ∈ (0,1]`; `BlackboardService.apply_edge_updates(...,
+  capacity_factors=)`, `links_for_hazard()`, `links_for_edges()`.
+- **Navigator**: NetworkX mirror of `road_edges` (severed removed; parallel edges keep
+  the cheapest), incremental on `edge.updated`; A* (haversine / heuristic speed); k
+  diverse paths by penalized successive shortest paths; **crowd dispersal** is a
+  Frank–Wolfe path-based assignment with BPR edge congestion `cost·(1+α(load/cap)^β)`
+  plus a zone-capacity term, then `split_groups` into integer crowd groups (one `Route`
+  per group). `compute_ms` is measured with `perf_counter`, never estimated; routes
+  carry `graph_version`; edge loads are written back for the dashboard.
+- **Explanations**: `Explainer` protocol. `DeterministicExplainer` builds the instruction
+  from road names/bearings; `SlmExplainer` (Ollama) is used only when
+  `ARCO_SLM_ENABLED=true` and falls back to the template on timeout, error, or if the
+  text drops a road name; `CachedExplainer` keys on a route hash so unchanged routes
+  cost nothing. `explanation_source` on each `Route` says which produced the text.
+- **Runtime** (`arco_agents.runner`): subscribes to `hazard|graph|edge|clock`, ticks
+  every `ARCO_AGENTS_TICK_S` (TTL expiry + regrow of hazards whose buffer still grows),
+  loads population/safe zones from `ARCO_POPULATION_PATH` or `POST /navigator/population`.
+  API on :8003 (`/health` reports graph version, routes, `last_compute_ms`, errors;
+  `/ws/routes` streams `routes.updated` + `agent.event`).
+- **Test isolation**: suites run in `<db>_test` with Redis channel prefix
+  `blackboard-test.` (Redis Pub/Sub is server-wide, so a prefix — not the logical DB
+  index — is what isolates the live `agents` container from test events).
+- Measured on the dev machine (Lahaina sample, 266 nodes / 637 edges, 6 cells / 2 zones,
+  CPU under Colima): cartographer apply ≈ 30–230 ms (cold), navigator full reroute
+  ≈ 15–18 ms compute / ≈ 60–270 ms hazard-POST → routes-on-WS wall. These are local
+  numbers, not benchmark claims.
+
 ## Limitations (honest list, kept current)
+
+- **Dispersal is static.** Frank–Wolfe over k candidate paths with BPR congestion is a
+  planning heuristic, not a time-expanded evacuation simulation; overload is flagged
+  (`routes.recomputed.overload`), not guaranteed away.
+- **No consensus yet.** Until Phase 6 every `hazard.*` event is applied at face value
+  (confidence gates only).
 
 - **Simulated footage.** Street feeds are synthetic composites and macro frames are
   static tiles; detections on them come from pretrained or synthetic detectors, not models

@@ -1,0 +1,72 @@
+{
+  "label": "Simulated on real event geometry",
+  "notes": "Demo origin cells and exit zones for the Lahaina sample road graph (data/samples/osm/lahaina_drive.graphml). Cells are a coarse grid over Lahaina town with APPROXIMATE populations summing to ~9,000 (Lahaina CDP had ~12,700 residents in 2020, US Census; visitors excluded). Exit zones are the north and south ends of Honoapiilani Highway inside the sample bbox, i.e. the directions people actually fled on 2023-08-08 (toward Kaanapali / toward Olowalu), NOT official shelters. Zone polygons are small squares around the highway end nodes of the OSM graph. Population figures and zone capacities are illustrative, for routing demos only.",
+  "population_cells": [
+    {
+      "id": "cell-front-st-south",
+      "geom": { "type": "Point", "coordinates": [-156.6735, 20.8685] },
+      "population": 1400
+    },
+    {
+      "id": "cell-front-st-central",
+      "geom": { "type": "Point", "coordinates": [-156.6775, 20.8745] },
+      "population": 1800
+    },
+    {
+      "id": "cell-lahainaluna",
+      "geom": { "type": "Point", "coordinates": [-156.6705, 20.8780] },
+      "population": 1600
+    },
+    {
+      "id": "cell-wahikuli",
+      "geom": { "type": "Point", "coordinates": [-156.6810, 20.8830] },
+      "population": 1500
+    },
+    {
+      "id": "cell-kahoma-village",
+      "geom": { "type": "Point", "coordinates": [-156.6790, 20.8880] },
+      "population": 1300
+    },
+    {
+      "id": "cell-ainakea",
+      "geom": { "type": "Point", "coordinates": [-156.6740, 20.8850] },
+      "population": 1400
+    }
+  ],
+  "safe_zones": [
+    {
+      "id": "exit-north-honoapiilani",
+      "name": "North exit (Honoapiilani Hwy toward Kaanapali)",
+      "geom": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-156.6859, 20.894],
+            [-156.6859, 20.896],
+            [-156.6839, 20.896],
+            [-156.6839, 20.894],
+            [-156.6859, 20.894]
+          ]
+        ]
+      },
+      "capacity": 6000
+    },
+    {
+      "id": "exit-south-honoapiilani",
+      "name": "South exit (Honoapiilani Hwy toward Olowalu)",
+      "geom": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-156.6705, 20.8628],
+            [-156.6705, 20.8648],
+            [-156.6685, 20.8648],
+            [-156.6685, 20.8628],
+            [-156.6705, 20.8628]
+          ]
+        ]
+      },
+      "capacity": 5000
+    }
+  ]
+}

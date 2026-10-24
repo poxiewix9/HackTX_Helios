@@ -2,7 +2,8 @@ name: arco
 
 # Phase 1: infra (PostGIS + pgRouting, Redis) and the blackboard migration one-shot.
 # Phase 2: blackboard API (REST + /ws/blackboard) on ${BLACKBOARD_PORT:-8001}.
-# Later phases add: base-station, agents, simulator, dashboard.
+# Phase 3: agents (Cartographer + Navigator, LangGraph) on ${AGENTS_PORT:-8003}.
+# Later phases add: base-station, simulator, dashboard.
 # Values come from .env (copy .env.example). Defaults below match .env.example.
 
 services:
@@ -86,6 +87,41 @@ services:
       timeout: 5s
       retries: 6
       start_period: 15s
+    restart: unless-stopped
+
+  agents:
+    build:
+      context: .
+      dockerfile: services/agents/Dockerfile
+    container_name: arco-agents
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-arco}:${POSTGRES_PASSWORD:-arco_dev_password}@postgres:5432/${POSTGRES_DB:-arco}
+      REDIS_URL: redis://redis:6379/0
+      AGENTS_PORT: 8003
+      ARCO_SLM_ENABLED: ${ARCO_SLM_ENABLED:-false}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      ARCO_SLM_MODEL: ${ARCO_SLM_MODEL:-qwen2.5:1.5b-instruct}
+      ARCO_POPULATION_PATH: /app/${ARCO_POPULATION_PATH:-data/samples/lahaina/demo_population.json}
+      ARCO_LOG_LEVEL: ${ARCO_LOG_LEVEL:-INFO}
+      ARCO_LOG_JSON: ${ARCO_LOG_JSON:-true}
+    ports:
+      - "${AGENTS_PORT:-8003}:8003"
+    depends_on:
+      blackboard:
+        condition: service_healthy
+    command: ["python", "-m", "arco_agents.api"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3); sys.exit(0 if r.status==200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     restart: unless-stopped
 
 volumes:

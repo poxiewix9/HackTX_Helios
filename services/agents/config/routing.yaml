@@ -1,0 +1,43 @@
+# Navigator routing + crowd-dispersal parameters.
+#
+# Edge travel cost under load (BPR-style congestion function, as used in traffic
+# assignment):
+#
+#   cost(e) = current_cost(e) * (1 + alpha * (load(e) / capacity(e)) ** beta)
+#
+# load is people per minute assigned to the edge; capacity is `capacity_estimate` from
+# the blackboard (people/min before congestion). alpha/beta are the classic BPR values.
+#
+# Dispersal (Frank-Wolfe): each population cell is a commodity with demand
+#   demand(cell) = population / evacuation_window_min      (people per minute)
+# Iteration k: all-or-nothing assign every commodity to its shortest path under the
+# congested costs, then move the current flow toward that assignment with step
+#   gamma_k = 2 / (k + 2)
+# This converges to a user-equilibrium flow where no edge is grossly overloaded. The
+# final per-cell flow split over its candidate paths becomes the crowd groups.
+#
+# Stampede guard: `max_load_ratio` is the density we never want to exceed. If the
+# equilibrium still exceeds it the Navigator reports max_edge_load_ratio > threshold
+# (it is never hidden) and the dashboard shows the hot edge.
+
+congestion:
+  alpha: 0.15
+  beta: 4.0
+  # Severed edges are removed from the graph; penalized edges keep current_cost.
+
+dispersal:
+  evacuation_window_min: 30 # population leaves over 30 minutes -> demand per minute
+  k_paths: 3 # diverse candidate paths per (cell, safe zone)
+  diversity_penalty: 1.6 # edge weights on an already-found path are multiplied by this
+  candidate_zones: 3 # nearest safe zones considered per cell
+  iterations: 12 # Frank-Wolfe steps
+  min_group_fraction: 0.08 # drop route splits carrying < 8 % of a cell's people
+  max_load_ratio: 0.85 # stampede-density guard (load / capacity)
+
+astar:
+  # Admissible heuristic: great-circle distance / fastest plausible speed (m/s) so the
+  # heuristic never overestimates the remaining travel time in seconds.
+  heuristic_speed_m_s: 25.0
+
+routes:
+  max_zone_capacity_overflow: 1.2 # zone "capacity" edge cost ramps up beyond 120 %

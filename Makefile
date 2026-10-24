@@ -5,7 +5,7 @@ SHELL := /bin/bash
 UV      ?= uv
 PNPM    ?= pnpm
 COMPOSE ?= docker compose
-PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard
+PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents
 
 # Load .env if present so DATABASE_URL etc. are available to host-side commands.
 ifneq (,$(wildcard .env))
@@ -56,7 +56,9 @@ lint: lint-py lint-ts ## Ruff + mypy + ESLint + Prettier
 lint-py:
 	$(UV) run ruff check $(PY_DIRS)
 	$(UV) run ruff format --check $(PY_DIRS)
-	$(UV) run mypy packages/shared-schemas/python services/blackboard/arco_blackboard
+	# agents separately: both services have tests/conftest.py (mypy duplicate-module)
+	$(UV) run mypy packages/shared-schemas/python services/blackboard
+	$(UV) run mypy services/agents
 
 .PHONY: lint-ts
 lint-ts:
@@ -71,7 +73,8 @@ format: ## Auto-format Python and TS
 
 .PHONY: typecheck
 typecheck: ## mypy + tsc only
-	$(UV) run mypy packages/shared-schemas/python services/blackboard/arco_blackboard
+	$(UV) run mypy packages/shared-schemas/python services/blackboard
+	$(UV) run mypy services/agents
 	$(PNPM) typecheck
 
 .PHONY: test
@@ -96,6 +99,25 @@ test-blackboard-events: ## Event bus (outbox + Redis + NOTIFY) + REST/WebSocket 
 .PHONY: test-blackboard-all
 test-blackboard-all: ## Every blackboard test incl. ingestion; requires `make db-up`
 	ARCO_REQUIRE_DB=1 $(UV) run pytest services/blackboard/tests -q
+
+.PHONY: test-cartographer
+test-cartographer: ## 3.1 Cartographer: policy math + sever/penalize/restore on the Lahaina graph (needs DB)
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests/test_cartographer.py -q
+
+.PHONY: test-navigator
+test-navigator: ## 3.2 Navigator: A*, dispersal, measured <1s reroute + LangGraph pipeline (needs DB)
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests/test_navigator.py services/agents/tests/test_pipeline.py -q -s
+
+.PHONY: test-agents
+test-agents: ## Every agents test
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests -q
+
+# ---------------------------------------------------------------------------
+# Agents service (host side)
+# ---------------------------------------------------------------------------
+.PHONY: serve-agents
+serve-agents: ## Run the agents API (Cartographer + Navigator) on $$AGENTS_PORT (default 8003)
+	$(UV) run uvicorn arco_agents.api:app --host 0.0.0.0 --port $${AGENTS_PORT:-8003} --reload --reload-dir services
 
 # ---------------------------------------------------------------------------
 # Blackboard service (host side)
