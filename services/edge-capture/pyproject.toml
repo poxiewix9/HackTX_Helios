@@ -1,0 +1,38 @@
+[project]
+name = "arco-edge-capture"
+version = "0.1.0"
+description = "ARCO edge node: frame capture, ONNX head inference, int8+zstd feature streaming (raw frames never leave)"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "arco-schemas",
+  "numpy>=1.26",
+  "onnxruntime>=1.18",
+  "onnx>=1.16",
+  "opencv-python-headless>=4.10",
+  "zstandard>=0.22",
+  "msgpack>=1.0",
+  "websockets>=12",
+  "httpx>=0.27",
+  "pydantic-settings>=2.5",
+  "structlog>=24.4",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Only needed to export / split / fine-tune models (scripts/export_split.py, scripts/finetune.py).
+# Kept out of the default sync: torch + ultralytics are large and the runtime only needs ORT.
+export = [
+  "torch>=2.3",
+  "torchvision>=0.18",
+  "ultralytics>=8.2",
+]
+
+[project.scripts]
+arco-edge-run = "arco_edge.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["arco_edge"]

@@ -16,18 +16,22 @@ and an offline community mesh. See `PROJECT_SPEC.md` for the full specification 
   `brew install colima docker docker-compose && colima start`
 - GNU make
 
-## Quick start (Phases 1–3)
+## Quick start (Phases 1–4)
 
 ```bash
 make bootstrap          # uv sync, pnpm install, .env, pre-commit hooks
-docker compose up -d --wait   # postgres+redis, migrate one-shot, blackboard API :8001, agents :8003
-make healthcheck        # containers healthy, extensions present, Redis PONG, both /health ok
+docker compose up -d --wait   # postgres+redis, migrate one-shot, blackboard :8001, base-station :8002, agents :8003
+make healthcheck        # containers healthy, extensions present, Redis PONG, every /health ok
 make ingest-sample      # Lahaina OSM road graph (offline sample) -> road_edges
 curl "localhost:8001/edges?bbox=-156.7,20.86,-156.66,20.9" | head -c 300
 make lint               # ruff + mypy --strict + eslint + prettier + tsc
 make test               # pytest (unit + integration) + vitest
 make test-blackboard-all      # blackboard tables, bus, REST/WS, ingestion (needs DB)
 make test-cartographer && make test-navigator   # Phase 3 agents (needs DB; isolated <db>_test)
+make test-split         # Phase 4 ONNX split / INT8 / packet codec / no-raw-frame guard
+make test-vision-e2e    # Phase 4 frame -> base station -> PostGIS hazard row + telemetry (needs DB)
+make run-edge FRAMES=25 # synthetic edge node against the compose base station (ARCO_DETECTOR=synthetic)
+make export-split WEIGHTS=models/yolov8n-seg.pt   # real model: head_int8 + tail + manifest (needs --extra export)
 make schemas            # regenerate JSON Schema + TS types from Pydantic
 make schemas-check      # fail if generated files are stale
 ```
@@ -35,7 +39,10 @@ make schemas-check      # fail if generated files are stale
 `docker compose up -d --wait` runs the `blackboard-migrate` one-shot before starting the
 `blackboard` API, so a fresh machine needs no host-side Python to get a migrated database.
 Stream events: `websocat "ws://localhost:8001/ws/blackboard?since_seq=0"`; routes and
-agent decisions: `websocat ws://localhost:8003/ws/routes`. Tests use an isolated
+agent decisions: `websocat ws://localhost:8003/ws/routes`. Vision: `websocat ws://localhost:8002/ws/telemetry` /
+`/ws/detections`; `curl localhost:8002/metrics`. With no model files the base station runs the
+labelled synthetic detector; `docker compose --profile vision up -d edge-capture` adds a
+synthetic edge node. Tests use an isolated
 `arco_test` database + `blackboard-test.` Redis prefix, so they never wipe the dev stack.
 
 ## Repository layout
@@ -44,10 +51,13 @@ agent decisions: `websocat ws://localhost:8003/ws/routes`. Tests use an isolated
 packages/shared-schemas/   Pydantic models -> JSON Schema -> TS types (the contract)
 services/blackboard/       PostGIS schema, Alembic migrations, event bus, spatial API
 services/agents/           LangGraph Cartographer + Navigator, penalties.yaml, explainer (SLM optional)
-services/{edge-capture,base-station,simulator,benchmark}/   (later phases)
+services/edge-capture/     ONNX split + INT8 head, feature-packet codec, frame sources, edge node
+services/base-station/     tail inference, seg postprocess, class map, georef, hazard writer, telemetry API
+services/{simulator,benchmark}/   (later phases)
 apps/{dashboard,mobile}/   Next.js dashboard, Expo community app (later phases)
-data/{scenarios,samples}/  scenario JSON + small sample assets
-scripts/                   healthcheck, loop_check (agent hook), export/quantize (later)
+data/{scenarios,samples}/  scenario JSON + small sample assets (vision georefs under samples/vision)
+models/                    exported ONNX heads/tails + manifest.json (gitignored; make export-split)
+scripts/                   healthcheck, loop_check (agent hook), export_split.py, finetune.py
 docs/                      ARCHITECTURE.md
 ```
 

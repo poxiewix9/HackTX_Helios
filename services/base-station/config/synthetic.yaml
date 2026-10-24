@@ -1,0 +1,36 @@
+# Scripted detections for the SYNTHETIC fallback detector (ARCO_DETECTOR=synthetic).
+#
+# No model runs. For every incoming feature packet the detector looks up entries matching
+# (stream, source_id) and emits a Detection for each entry active at the packet's time
+# `t` (= scenario_t if the edge sent one, else seconds since the first packet from that
+# source). Boxes are in the SOURCE image's pixel space (header.georef image size) so they
+# georeference like real detections. `grow_px_per_s` enlarges the box over time to mimic
+# a spreading hazard. Everything emitted carries detector="synthetic".
+
+entries:
+  - stream: micro
+    source_id: "*" # any street camera
+    hazard_class: debris
+    bbox_px: [420, 470, 860, 700] # lower-middle of the frame: on the road, near the camera
+    confidence: 0.82
+    start_t: 0
+    end_t: null
+    grow_px_per_s: 0
+
+  - stream: micro
+    source_id: "*"
+    hazard_class: smoke
+    bbox_px: [560, 420, 720, 480]
+    confidence: 0.61
+    start_t: 3
+    end_t: 60
+    grow_px_per_s: 4
+
+  - stream: macro
+    source_id: "*"
+    hazard_class: fire_front
+    bbox_px: [300, 300, 420, 400]
+    confidence: 0.9
+    start_t: 0
+    end_t: null
+    grow_px_per_s: 6

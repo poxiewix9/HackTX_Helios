@@ -10,6 +10,14 @@ Append; never rewrite history.
 - 2026-10-24 agents → architect — **APPLIED** (schema 0.2.1): `RoadEdge.capacity_factor: float = 1.0` (0 < x ≤ 1), the Cartographer's
   capacity reduction for `crowd_bottleneck` so the Navigator's congestion term sees it without a side channel. Blackboard column +
   migration `0003_edge_capacity_factor`, `convert` round-trip, `make schemas` regenerated (JSON + TS). Non-breaking (default 1.0).
+- 2026-10-24 vision → architect — **REQUESTED**: `PipelineKind` currently is `Literal["fp32_full", "int8_split"]`. The base station
+  runs the synthetic detector through the split topology and has to label its `TelemetrySample.pipeline` as `int8_split`; the
+  `detector="synthetic"` field on `DetectionsMessage` / `/health` is the honest label today. Proposal (non-breaking): add
+  `"synthetic"` to `PipelineKind` so the dashboard can badge telemetry without joining it to the detections stream. Alternative:
+  `TelemetrySample.detector: str | None = None`.
+- 2026-10-24 vision → architect — **FYI, no change needed now**: `FeaturePacketHeader` has no `capture_ms`, so the base station reports
+  `capture = 0.0`. The edge measures it (`EdgeStats.mean_capture_ms`); if Phase 5 wants it in the per-frame sample, add
+  `capture_ms: float = 0.0` to the header.
 
 ## HANDOFFS
 
@@ -115,3 +123,61 @@ Known limitations:
   - Population cells snap to the nearest node; the demo population is approximate.
   - SLM path is implemented and unit-tested for fallback, but not exercised against a running Ollama here.
   - `graph_edges` in `/health` is the mirror's edge count (parallel edges collapsed), not `road_edges` row count.
+
+### [vision -> reviewer, benchmark, simulator, dashboard] 2026-10-24 21:30  4.1, 4.2
+What I built: `services/edge-capture` (`arco_edge`) — model-agnostic ONNX split with a privacy guard (cuts only after the last use of the
+image input, single-tensor boundaries), ORT static INT8 QDQ quantization of the head, measured FP32/INT8 tolerance in `manifest.json`,
+feature-packet codec (uint8 + zstd + msgpack, `FeaturePacketHeader` from the contract), deterministic letterbox, frame sources
+(OpenCV / image dir / **SIMULATED** synthetic), `WebSocketLink` with a private-destination guard, `EdgeNode` + `arco-edge-run`.
+`services/base-station` (`arco_base`) — `SplitDetector` (tail), `FullDetector` (unsplit baseline, in-process only), `SyntheticDetector`
+(**SIMULATED**, `config/synthetic.yaml`), YOLOv8-seg postprocess (NMS, mask → Shapely polygon), `config/class_map.yaml` (identity +
+labelled COCO proxy with `min_count`), georef (normalised-DLT homography with horizon rejection, GDAL tile affine), `HazardWriter`
+(uuid5 identity per `source_id:class`, change/interval re-post), `TelemetryHub` (9 stages, drops, FPS, Prometheus), FastAPI on :8002.
+`scripts/export_split.py` (list cuts / export / quantize / verify, non-zero exit on tolerance miss), `scripts/finetune.py`. Compose:
+`base-station` (default up, `ARCO_DETECTOR=synthetic`, `./models` mounted ro) and `edge-capture` (profile `vision`). Sample georefs in
+`data/samples/vision/georef/` ("Simulated on real event geometry": hypothetical camera, real Lahaina coordinates).
+How to run/test:
+  docker compose up -d --wait && make healthcheck          # base-station :8002 now part of the stack
+  make test-split && make test-vision-e2e                  # 24 + 11 tests; the latter needs the DB (isolated <db>_test)
+  make run-edge FRAMES=25                                  # host edge node -> container base station -> blackboard -> agents reroute
+  uv sync --package arco-edge-capture --extra export && make export-split WEIGHTS=models/yolov8n-seg.pt   # real model (torch, ~2 GB)
+  ARCO_DETECTOR=onnx_split make serve-base-station         # then ARCO_DETECTOR=onnx_split make run-edge
+Interfaces I expose / changed:
+  - Base station :8002: `GET /health` (detector, model_id, providers, frames per stream, drops, `last_total_ms`, `last_error`),
+    `GET /metrics` (Prometheus: `arco_stage_ms{stage,stream,pipeline}`, `arco_frame_total_ms`, `arco_frames_total`,
+    `arco_frames_dropped_total`, `arco_edge_bytes_total`, `arco_fps`), `POST /features` (one msgpack packet → `DetectionsMessage`),
+    `WS /ws/features` (binary packets in), `WS /ws/detections` (`DetectionsMessage` JSON), `WS /ws/telemetry` (`TelemetryMessage` JSON,
+    `sample.mode == "live"`). Hazards reach everyone else through the blackboard as before (`source` = `micro_vision` / `macro_vision` /
+    `simulated`, `camera_id` = `source_id`, `model_id` = manifest id or `synthetic`).
+  - Wire format `arco_edge.packet.encode/decode`: msgpack `{"h": <FeaturePacketHeader JSON>, "p": zstd(uint8 tensor)}`; quant params and
+    tensor shape live in the header's `shape`/`dtype`/`scale`/`zero_point`/`compression` fields (contract 0.2.1, unchanged).
+  - Python: `arco_edge.onnx_tools.{single_cut_points, split_model, quantize_static_int8, compare_split, SplitManifest}`,
+    `arco_edge.sources.{SyntheticSource, CaptureSource, ImageDirSource}`, `arco_edge.main.EdgeNode`; `arco_base.detectors.{SplitDetector,
+    FullDetector, SyntheticDetector}`, `arco_base.georef.{CameraHomography, TileAffine}`, `arco_base.postprocess.decode`,
+    `arco_base.hazards.HazardWriter`, `arco_base.telemetry.TelemetryHub`, `arco_base.api.create_app`.
+  - Env: `ARCO_DETECTOR=synthetic|onnx_split` (edge & base; `onnx_full` is in-process only), `ARCO_MODELS_DIR`, `ARCO_MODEL_ID`,
+    `ARCO_ORT_PROVIDERS`, `ARCO_EDGE_*`, `ARCO_BASE_STATION_URL`, `ARCO_ALLOW_REMOTE_BASE` (default off), `ARCO_HAZARD_*`.
+  - Makefile: `test-split`, `test-vision-e2e`, `test-vision`, `export-split`, `serve-base-station`, `run-edge`; mypy now runs per service.
+What I need from you:
+  - Reviewer: `/review` 4.1, 4.2. Things worth poking: the privacy guard (`single_cut_points` + `test_no_raw_frame_leaves_the_edge`),
+    homography sign/horizon handling, `HazardWriter` identity semantics (one row per `source_id:class`; a second debris pile seen by the
+    same camera would merge into the first until instance tracking exists — documented limitation), `Broadcaster.serve` disconnect fix.
+  - Benchmark (5.1): pipeline A = `FullDetector.detect_frame(frame)` in-process (FP32 unsplit); pipeline B = `OnnxHead` + `encode` →
+    `decode` + `SplitDetector`. Both return per-stage ms already; `TelemetryHub.record` builds the `TelemetrySample`. Local CPU numbers
+    (not claims): head_int8 ≈ 6 ms, tail ≈ 61 ms, full ≈ 66–68 ms, packet ≈ 131 kB. Expect "tail ≈ full" on CPU; a later cut
+    (`--list-cuts`) moves compute to the edge — that trade-off is yours to measure.
+  - Simulator (7.1): `SyntheticDetector` keys on `scenario_t` when the edge sends it (`ARCO_EDGE_*` has no scenario clock yet — if you want
+    vision hazards to follow the scenario clock, publish `clock` events and I will pace the edge from them; otherwise inject hazards
+    directly as planned).
+  - Dashboard (8.1): `ws://…:8002/ws/telemetry` gives the stage bar per frame (`sample.stage_ms`, `total_ms`, `fps`, `dropped_frames`,
+    `bytes_sent`); `ws://…:8002/ws/detections` gives boxes/polygons in source pixels for the video overlay. Badge `detector`.
+  - Architect: see CONTRACT CHANGE REQUESTS (`PipelineKind` "synthetic").
+Known limitations:
+  - Pretrained COCO weights + proxy class map exercise the mechanics; they are not a hazard detector until `scripts/finetune.py` is run on
+    hazard data. INT8 calibration defaults to seeded noise (recorded in the manifest).
+  - On this CPU the split does not reduce base-station compute (tail ≈ full); gains are bandwidth and edge offload. GPU/TensorRT untested here.
+  - `network` stage = wall-clock difference between edge and base; clock skew is clamped and counted, not corrected. In the burst-mode test
+    it is dominated by queueing behind the single worker, in paced runs ≈ 75 ms through Colima port forwarding.
+  - One hazard row per `source_id:class` (no per-instance tracking); `capture_ms` not transmitted; telemetry `pipeline` cannot say
+    `synthetic` until the contract changes.
+  - `edge-capture` in compose uses the synthetic source; a real camera needs the host (device passthrough is not available under Colima).

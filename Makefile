@@ -5,7 +5,7 @@ SHELL := /bin/bash
 UV      ?= uv
 PNPM    ?= pnpm
 COMPOSE ?= docker compose
-PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents
+PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents services/edge-capture services/base-station scripts/export_split.py scripts/finetune.py
 
 # Load .env if present so DATABASE_URL etc. are available to host-side commands.
 ifneq (,$(wildcard .env))
@@ -59,6 +59,8 @@ lint-py:
 	# agents separately: both services have tests/conftest.py (mypy duplicate-module)
 	$(UV) run mypy packages/shared-schemas/python services/blackboard
 	$(UV) run mypy services/agents
+	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
+	$(UV) run mypy services/base-station
 
 .PHONY: lint-ts
 lint-ts:
@@ -75,6 +77,8 @@ format: ## Auto-format Python and TS
 typecheck: ## mypy + tsc only
 	$(UV) run mypy packages/shared-schemas/python services/blackboard
 	$(UV) run mypy services/agents
+	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
+	$(UV) run mypy services/base-station
 	$(PNPM) typecheck
 
 .PHONY: test
@@ -111,6 +115,29 @@ test-navigator: ## 3.2 Navigator: A*, dispersal, measured <1s reroute + LangGrap
 .PHONY: test-agents
 test-agents: ## Every agents test
 	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests -q
+
+.PHONY: test-split
+test-split: ## 4.1 ONNX split / INT8 quantization / packet codec / privacy guard (no DB)
+	$(UV) run pytest services/edge-capture/tests -q -s
+
+.PHONY: test-vision-e2e
+test-vision-e2e: ## 4.2 edge -> base station -> PostGIS hazard + telemetry (needs DB)
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/base-station/tests -q -s
+
+.PHONY: test-vision
+test-vision: test-split test-vision-e2e ## All Phase 4 tests
+
+.PHONY: export-split
+export-split: ## Export + split + INT8 quantize a YOLOv8 model (needs: uv sync --package arco-edge-capture --extra export --inexact)
+	$(UV) run python scripts/export_split.py --weights $(or $(WEIGHTS),models/yolov8n-seg.pt) --imgsz 640 --split-index $(or $(SPLIT_INDEX),10)
+
+.PHONY: serve-base-station
+serve-base-station: ## Run the base station host-side (:8002)
+	cd services/base-station && $(UV) run uvicorn arco_base.api:app --host 0.0.0.0 --port $${BASE_STATION_PORT:-8002} --reload
+
+.PHONY: run-edge
+run-edge: ## Run the edge node host-side against ARCO_BASE_STATION_URL (FRAMES=N to stop)
+	cd services/edge-capture && $(UV) run python -m arco_edge.main $(if $(FRAMES),--frames $(FRAMES),)
 
 # ---------------------------------------------------------------------------
 # Agents service (host side)

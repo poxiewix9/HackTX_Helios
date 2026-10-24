@@ -75,6 +75,23 @@ else
   fi
 fi
 
+echo "== base-station api =="
+bs_port="${BASE_STATION_PORT:-8002}"
+if [[ "$(status base-station)" == "" ]]; then
+  echo "  not running (optional; start with: docker compose up -d base-station)"
+else
+  for _ in $(seq 1 30); do
+    [[ "$(status base-station)" == "healthy" ]] && break
+    sleep 2
+  done
+  if body="$(curl -fsS "http://localhost:${bs_port}/health" 2>/dev/null)"; then
+    echo "  $body"
+    echo "$body" | grep -q '"status":"ok"' || { echo "  status not ok"; fail=1; }
+  else
+    echo "  GET /health failed on port ${bs_port}"; fail=1
+  fi
+fi
+
 echo "== agents api =="
 ag_port="${AGENTS_PORT:-8003}"
 if [[ "$(status agents)" == "" ]]; then

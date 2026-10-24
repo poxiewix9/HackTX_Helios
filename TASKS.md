@@ -11,10 +11,10 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 | 2.1  | blackboard | 1.2,1.3    | Tables, migrations, indexes                   | `make test-blackboard`                            | DONE        | see log 2.1 |
 | 2.2  | blackboard | 2.1        | Event bus + spatial API + WS stream           | `make test-blackboard-events`                     | DONE        | see log 2.2 |
 | 2.3  | blackboard | 2.1        | OSMnx ingestion                               | `make ingest-sample && make test`                 | DONE        | see log 2.3 |
-| 3.1  | agents     | 2.2,2.3    | Cartographer                                  | `make test-cartographer`                          | IN_REVIEW   | see log 3.1 |
-| 3.2  | agents     | 3.1        | Navigator + crowd dispersal                   | `make test-navigator`                             | IN_REVIEW   | see log 3.2 |
-| 4.1  | vision     | 1.2        | Export, split, quantize                       | `make test-split`                                 | TODO        |          |
-| 4.2  | vision     | 4.1,2.2    | Edge capture + base station + georef          | `make test-vision-e2e`                            | TODO        |          |
+| 3.1  | agents     | 2.2,2.3    | Cartographer                                  | `make test-cartographer`                          | DONE        | see log 3.1 |
+| 3.2  | agents     | 3.1        | Navigator + crowd dispersal                   | `make test-navigator`                             | DONE        | see log 3.2 |
+| 4.1  | vision     | 1.2        | Export, split, quantize                       | `make test-split`                                 | IN_REVIEW   | see log 4.1 |
+| 4.2  | vision     | 4.1,2.2    | Edge capture + base station + georef          | `make test-vision-e2e`                            | IN_REVIEW   | see log 4.2 |
 | 5.1  | benchmark  | 4.2        | FP32 vs split benchmark + recorded replay     | `make bench`                                      | TODO        |          |
 | 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | TODO        |          |
 | 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | TODO        |          |
@@ -31,6 +31,7 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 
 - Phase 1 — 2026-10-24 — gate: `make lint`, `make schemas-check`, `make test`, `docker compose up -d && make healthcheck` all green; 1.1-1.3 DONE (user said "continue"). Commit `de817c8`.
 - Phase 2 — 2026-10-24 — gate: `make lint`, `make test` (62 py + 14 ts), `make test-blackboard-all` (35), `docker compose up -d --wait && make healthcheck`, `make ingest-sample` all green; 2.1-2.3 DONE (user said "continue"). Commit `386e819`.
+- Phase 3 — 2026-10-24 — gate: `make lint`, `make test` (92 py + 14 ts), `make test-cartographer` (15), `make test-navigator` (15), `docker compose up -d --wait && make healthcheck`, live hazard → sever → reroute → `/ws/routes` verified; 3.1-3.2 DONE (user said "continue"). Commits `cea1819`, `ed2358c`.
 
 ## Task logs
 (Agents append: iteration count, commands run, last output lines, root causes found.)
@@ -158,4 +159,46 @@ Live E2E against the compose stack (`arco-agents` container): `POST :8001/hazard
 ```
 $ make lint      -> ruff clean, 54 files formatted, mypy: 30 + 19 source files no issues, eslint/prettier/tsc clean (exit 0)
 $ make test      -> 92 passed (pytest, incl. 15 + 15 agents) / Test Files 2 passed, Tests 14 passed (vitest)
+```
+
+### 4.1 vision — 2026-10-24 — 5 iterations
+- it1: split correctness test on the tiny conv net passed only for the cut *before* the concat — cuts inside a skip connection are two tensors, not one. Root cause: the cut enumeration looked at node boundaries, not at the set of live tensors. Rewrote `single_cut_points()` as a live-tensor sweep: a cut is valid only where exactly ONE tensor crosses the boundary **and** every consumer of the graph input is already behind it (privacy guard). The tiny net's `cat` cut is now found and tested.
+- it2: `quantize_static` failed on the YOLO head with `ShapeInferenceError` → run `quant_pre_process` (symbolic shape inference) first, fall back to the raw model if the pre-processor itself fails; both paths covered.
+- it3: INT8 head test passed even with a broken quantizer because cosine(fp32, fp32) = 1 → added the assertion that the INT8 output must differ from FP32 (`max_abs > 0`) so the test cannot pass by not quantizing.
+- it4: Exporting yolov8n-seg: ultralytics tried to pip-install `onnxslim` (no pip in the uv venv) → export without the simplifier; split found 10 single-tensor cuts after the image's last use, chose index 10 (`/model.3/act/Mul_output_0`, `[1,64,80,80]`). Disk was 100 % full mid-export (torch) → cleaned caches, finished, then removed torch/ultralytics again (`uv sync --all-packages`).
+- it5: `opencv-python-headless` files were missing from the venv after the disk-full event (dist-info present, no `cv2`) → `uv sync --reinstall-package opencv-python-headless`. Lint: E501/PLC0415/mypy in new tests → wrapped lines, hoisted imports, typed helpers (no rule weakened); Makefile runs mypy per service (duplicate `conftest`).
+```
+$ make test-split
+uv run pytest services/edge-capture/tests -q -p no:cacheprovider -s
+.......INT8 head: min cosine=0.99995 max_abs=0.1044 (fp32 split max_abs=0.00e+00)
+..yolov8n-seg: INT8 head min cosine=0.99983 manifest={"fp32_split_max_abs_measured": 0.0, "fp32_split_bound": 0.0001, "int8_head_min_cosine_measured": 0.9998390518168697, "int8_head_cosine_bound": 0.99, "int8_head_mean_abs_measured": 0.09483722586635389, "eval_inputs": 4, "calibration": "synthetic_noise", "calibration_n": 16, "quantize_seconds": 2.2}
+.
+24 passed in 1.35s
+```
+Covers: cut enumeration on a conv net with a skip/concat (cuts `r0`, `r1`, `cat`; none inside the skip); `choose_cut` by index / tensor name; a graph whose last node reads the image has **no** valid cut (`SplitError`); FP32 split == unsplit to ≤ 1e-4 at every cut; INT8 head cosine ≥ 0.99 *and* ≠ FP32; `compare` rejects shape mismatch; manifest round-trip; the exported yolov8n-seg head/tail re-verified against `full_fp32.onnx` when `models/yolov8n-seg/manifest.json` exists (it does locally; `models/` is gitignored). Packet codec: uint8 error ≤ scale/2, constant tensor, zstd round-trip; deterministic letterbox; seeded synthetic source; private-host classification table; remote base refused without `ARCO_ALLOW_REMOTE_BASE`; **`test_no_raw_frame_leaves_the_edge`**: full `EdgeNode` run with a recording link, no outbound frame contains any captured image row and each decodes to the cut-shape tensor.
+Real-model numbers (local, M1 Pro CPU EP, not a benchmark claim): `scripts/export_split.py --weights models/yolov8n-seg.pt --split-index 10` → head_int8 60 KB, tolerance block above; `quantize_seconds=2.2`.
+
+### 4.2 vision — 2026-10-24 — 6 iterations
+- it1: `test_homography_recovers_pinhole_ground_plane` was off by metres for far points: DLT solution had negative projective depth for valid pixels, so the horizon test rejected everything. Root cause: SVD null vector sign is arbitrary → normalise `H` so calibration points map with `w > 0`; horizon test moved from row 150 (still ground for a 14° pitch) to row 100 (sky).
+- it2: blackboard returned 422 to the `HazardWriter` — it posted `content=` (raw JSON string) with no content-type → `json=h.model_dump(mode="json")`.
+- it3: `WsCollector._stop` in the E2E test shadowed `threading.Thread._stop` and the thread never exited → renamed `_halt`.
+- it4: test relative import `from .conftest import GEOREF_DIR` broke under the workspace rootdir → module-level path constants in each test.
+- it5: polygon bounds assertion in the seg decode test was tighter than the 160×160 prototype grid can resolve → tolerance = one prototype cell (documented in the test).
+- it6: after `make test-vision-e2e` passed, uvicorn printed `Cancel N running task(s)` tracebacks on teardown: the `/ws/detections` and `/ws/telemetry` handlers were send-only loops and never learned the client had closed. Fixed in `Broadcaster.serve` (concurrent receive task → `WebSocketDisconnect` promptly). Re-ran: 0 tracebacks.
+```
+$ make test-vision-e2e
+ARCO_REQUIRE_DB=1 uv run pytest services/base-station/tests -q -p no:cacheprovider -s
+REAL MODEL yolov8n-seg: head_int8=5.6ms serialize=2.4ms packet=130627B (21x smaller than raw BGR) tail=61.3ms post=1.54ms providers=['CPUExecutionProvider'] detections=0
+REAL MODEL yolov8n-seg: full_fp32=67.9ms (same frame, same process)
+REAL MODEL E2E 6 frames: mean stage ms={'capture': 0.0, 'head': 12.68, 'serialize': 3.38, 'network': 158.71, 'deserialize': 0.93, 'tail': 64.48, 'postprocess': 1.21, 'georef': 0.34, 'db_write': 0.0} mean total=241.7ms mean packet=130731B
+VISION E2E 12 frames: wall=215ms last total=189.4ms stages={'capture': 0.0, 'head': 0.0, 'serialize': 0.01, 'network': 174.23, 'deserialize': 0.08, 'tail': 0.0, 'postprocess': 0.01, 'georef': 0.36, 'db_write': 14.71}
+11 passed in 7.42s
+```
+Covers: homography recovery from a pinhole camera (< 5 % range error on held-out ground points), horizon + degenerate input rejected, sample `camera_front_st.json` self-consistent (RMS < 1 px), tile affine corners; YOLOv8-seg decode + class-aware NMS + mask→polygon on a fabricated output; COCO proxy aggregation (1 person → nothing, 4 → one `crowd_bottleneck`, identity map for fine-tuned names). Integration: synthetic edge (12 frames, 1280×720, real `CameraGeoref`) → `ws://…/ws/features` → base station (synthetic detector) → blackboard REST → **2 hazard rows in PostGIS** (`debris`, `smoke`, `source=simulated`, polygons inside the Lahaina bbox), `DetectionsMessage.detector == "synthetic"`, `TelemetrySample(mode="live")` with all 9 stages, Prometheus `/metrics`, `hazard.created/updated` on the blackboard WS; HTTP `POST /features` macro tile path → `fire_front` row. Real model (skipped without manifest): INT8 head → packet → real tail + FP32 baseline, and the E2E through the base station with `ARCO_DETECTOR=onnx_split`.
+Note on the numbers: `network` ≈ 150–190 ms in-test is queueing from an un-paced 12-frame burst into a single-worker base station on the same host (frames wait behind each other), not link latency; the paced live run below shows ~75 ms through Colima port forwarding. On this CPU tail (61 ms) ≈ unsplit (68 ms): the split buys bandwidth (131 kB vs 2.7 MB) and edge offload, not base compute — stated in the docs, to be measured properly in Phase 5.
+Live E2E against the compose stack: `docker compose up -d --wait` (new `base-station` container healthy) → host `arco_edge.main --frames 25` at 5 FPS → `/health` `frames=25 dropped=0 last_total_ms=74.2` → blackboard rows `smoke`/`debris` `cam-front-st active` → `arco-agents` log `cartographer penalized=2 compute_ms=47.0 graph_version=10` → `navigator routes=6 compute_ms=15.5`. `/metrics`: `arco_frame_total_ms_count{pipeline="int8_split",stream="micro"} 25`.
+```
+$ make lint   -> ruff clean, all files formatted, mypy: 30 + 19 + 15 + 13 source files no issues, eslint/prettier/tsc clean (exit 0)
+$ make test   -> 127 passed (pytest) / Test Files 2 passed, Tests 14 passed (vitest)
+$ make healthcheck -> postgres/redis/blackboard/base-station/agents all ok: healthcheck: OK
 ```

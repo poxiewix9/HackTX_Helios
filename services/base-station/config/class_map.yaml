@@ -1,0 +1,40 @@
+# Model class name -> ARCO HazardClass, per stream.
+#
+# Two kinds of entries:
+#   hazards : a fine-tuned model whose class names ARE hazard classes (scripts/finetune.py).
+#             Identity mapping; anything not in the taxonomy is dropped.
+#   coco    : PROXY mapping for the pretrained COCO yolov8*-seg weights so the split
+#             pipeline can be exercised and timed on real footage before fine-tuning.
+#             It is honest about what it is: a car is reported as `vehicle_blockage`, a
+#             group of people as `crowd_bottleneck`. Detections produced through this map
+#             carry `model_id` = the COCO model and the dashboard shows the model id.
+#             `min_count` aggregates N instances of the same class in one frame into ONE
+#             hazard (the union of their footprints) — one pedestrian is not a bottleneck.
+#
+# Unlisted classes are ignored. `min_conf` overrides the global threshold per class.
+
+hazards:
+  micro:
+    debris: { to: debris }
+    flooded_road: { to: flooded_road }
+    fire: { to: fire }
+    smoke: { to: smoke }
+    crowd_bottleneck: { to: crowd_bottleneck }
+    vehicle_blockage: { to: vehicle_blockage }
+    downed_line: { to: downed_line }
+  macro:
+    fire_front: { to: fire_front }
+    smoke: { to: smoke }
+    flood_water: { to: flood_water }
+    collapsed_building: { to: collapsed_building }
+    tornado_swath: { to: tornado_swath }
+    blocked_road: { to: blocked_road }
+
+coco:
+  micro:
+    person: { to: crowd_bottleneck, min_count: 4, min_conf: 0.35 }
+    car: { to: vehicle_blockage, min_count: 2, min_conf: 0.4 }
+    truck: { to: vehicle_blockage, min_count: 1, min_conf: 0.4 }
+    bus: { to: vehicle_blockage, min_count: 1, min_conf: 0.4 }
+    boat: { to: debris, min_count: 1, min_conf: 0.5 } # boats on a road = flood debris
+  macro: {} # COCO has nothing useful for top-down imagery; macro needs fine-tuning

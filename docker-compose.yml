@@ -124,5 +124,69 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  base-station:
+    build:
+      context: .
+      dockerfile: services/base-station/Dockerfile
+    container_name: arco-base-station
+    environment:
+      ARCO_DETECTOR: ${ARCO_DETECTOR:-synthetic}
+      ARCO_MODELS_DIR: /app/models
+      ARCO_MODEL_ID: ${ARCO_MODEL_ID:-yolov8n-seg}
+      ARCO_ORT_PROVIDERS: ${ARCO_ORT_PROVIDERS:-}
+      BLACKBOARD_URL: http://blackboard:8001
+      BASE_STATION_PORT: 8002
+      ARCO_LOG_LEVEL: ${ARCO_LOG_LEVEL:-INFO}
+      ARCO_LOG_JSON: ${ARCO_LOG_JSON:-true}
+    volumes:
+      - ./models:/app/models:ro # exported ONNX (scripts/export_split.py); unused when synthetic
+    ports:
+      - "${BASE_STATION_PORT:-8002}:8002"
+    depends_on:
+      blackboard:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=3); sys.exit(0 if r.status==200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  # Edge node streaming the SYNTHETIC source. Opt-in (it posts scripted hazards):
+  #   docker compose --profile vision up -d edge-capture
+  edge-capture:
+    profiles: ["vision"]
+    image: arco-base-station
+    build:
+      context: .
+      dockerfile: services/base-station/Dockerfile
+    container_name: arco-edge-capture
+    environment:
+      ARCO_DETECTOR: ${ARCO_DETECTOR:-synthetic}
+      ARCO_MODELS_DIR: /app/models
+      ARCO_MODEL_ID: ${ARCO_MODEL_ID:-yolov8n-seg}
+      ARCO_EDGE_STREAM: ${ARCO_EDGE_STREAM:-micro}
+      ARCO_EDGE_SOURCE: ${ARCO_EDGE_SOURCE:-synthetic}
+      ARCO_EDGE_GEOREF_PATH: /app/${ARCO_EDGE_GEOREF_PATH:-data/samples/vision/georef/camera_front_st.json}
+      ARCO_EDGE_FPS: ${ARCO_EDGE_FPS:-5}
+      ARCO_BASE_STATION_URL: ws://base-station:8002/ws/features
+      ARCO_LOG_LEVEL: ${ARCO_LOG_LEVEL:-INFO}
+      ARCO_LOG_JSON: ${ARCO_LOG_JSON:-true}
+    volumes:
+      - ./models:/app/models:ro
+    working_dir: /app/services/edge-capture
+    command: ["python", "-m", "arco_edge.main"]
+    depends_on:
+      base-station:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:

@@ -128,8 +128,9 @@ Pydantic models (python/arco_schemas/*.py)
 |-------|-----------------------------------------|-------------|
 | 1     | Scaffold, schemas, compose, migrations, CI | **done** |
 | 2     | Blackboard tables, events, API, OSMnx   | **done** (see "Blackboard internals") |
-| 3     | Cartographer + Navigator (deterministic), SLM behind an interface | **built, in review** (see "Agents internals") |
-| 4-10  | see `PROJECT_SPEC.md` §8                | pending     |
+| 3     | Cartographer + Navigator (deterministic), SLM behind an interface | **done** (see "Agents internals") |
+| 4     | Split-inference vision: ONNX split + INT8 head, edge-capture, base-station (georef, telemetry, synthetic fallback) | **built, in review** (see "Vision internals") |
+| 5-10  | see `PROJECT_SPEC.md` §8                | pending     |
 
 ## Blackboard internals (Phase 2)
 
@@ -201,6 +202,55 @@ Pydantic models (python/arco_schemas/*.py)
   ≈ 15–18 ms compute / ≈ 60–270 ms hazard-POST → routes-on-WS wall. These are local
   numbers, not benchmark claims.
 
+## Vision internals (Phase 4)
+
+- **Model-agnostic split** (`arco_edge.onnx_tools`): a cut point is any tensor that is
+  the *single* edge between two halves of the ONNX graph **after the last node that reads
+  the image input** — that second condition is the privacy guard, enforced by analysis,
+  so a tail can never require the frame. `onnx.utils.Extractor` produces `head` / `tail`;
+  the FP32 split must reproduce the unsplit model to ≤ 1e-4 (tested on a tiny conv net
+  with a skip/concat and on the exported model when present).
+- **INT8 head**: ORT static QDQ quantisation (MinMax, per-channel int8 weights, uint8
+  activations). The export script measures cosine similarity of the INT8 head vs FP32 on
+  held-out inputs and writes it to `manifest.json` (`≥ 0.99` required; yolov8n-seg
+  measured 0.9998 with noise calibration). The tail stays FP32 — base-station quantisation
+  is a Phase 5 benchmark question, not a Phase 4 assumption.
+- **Feature packet**: cut tensor → asymmetric uint8 (per-tensor scale/zero-point, error
+  ≤ scale/2) → zstd(3) → msgpack `{h: FeaturePacketHeader JSON, p: bytes}`. The header
+  carries `source_id`, `frame_id`, `model_id`/`split_layer`, tensor `shape`/`dtype`/`scale`/
+  `zero_point`, `georef` (which includes the image size), `head_ms`, `serialize_ms`,
+  `captured_wall_t`, `scenario_t` — no pixels, no file names. Letterbox
+  parameters are recomputed from `(width, height, imgsz)` on both sides.
+- **Edge privacy guard**: `assert_local_destination()` refuses non-private base-station
+  hosts unless `ARCO_ALLOW_REMOTE_BASE=1`, and
+  `test_no_raw_frame_leaves_the_edge` runs the real node against a recording link and
+  asserts no outbound bytes contain any captured image row.
+- **Base station**: YOLOv8-seg decode (boxes + 32 mask coefficients × prototypes) → NMS →
+  mask → contour → simplified Shapely polygon in original pixels → `class_map.yaml`
+  (identity for fine-tuned hazard models; a labelled **COCO proxy** map with `min_count`
+  aggregation for pretrained weights) → georef.
+- **Georef**: `CameraGeoref` → planar homography solved by normalised DLT (SVD) in local
+  metres around the camera, sign-normalised so calibration points have positive
+  projective depth; pixels at/above the horizon (`w ≤ 0`) are rejected rather than mapped
+  to infinity; reprojection RMS is exposed. `TileGeoref` → GDAL affine. Rings are closed
+  and made valid before becoming `Hazard.geometry`.
+- **Hazard identity**: `uuid5(NAMESPACE, "source_id:hazard_class")` — a camera seeing the
+  same debris pile for 100 frames updates **one** row (re-post when the footprint area
+  changes by `ARCO_HAZARD_CHANGE_FRACTION` (5 %) or every `ARCO_HAZARD_REPOST_S`), so the cartographer is not re-triggered per
+  frame. `source` is `micro_vision` / `macro_vision` (or `simulated`).
+- **Telemetry**: every frame yields a `TelemetrySample(mode="live")` with all nine stages;
+  `network = received − captured − head − serialize` (clock skew clamped + counted),
+  drops from frame-id gaps, rolling FPS, CPU/RSS; mirrored to Prometheus `/metrics`.
+- **Synthetic fallback** (`ARCO_DETECTOR=synthetic`, the compose default): a scripted
+  schedule (`config/synthetic.yaml`) emits detections through the same packet / georef /
+  writer / telemetry path with `detector="synthetic"` and `source="simulated"`, so the
+  rest of the system can be exercised without model files.
+- Measured on the dev machine (M1 Pro, CPU EP, yolov8n-seg @ 640, cut after
+  `/model.3`): head INT8 ≈ 6 ms, serialize ≈ 3 ms, packet ≈ 131 kB (21× smaller than the
+  raw BGR frame), tail FP32 ≈ 61 ms, unsplit FP32 ≈ 66–68 ms. On this CPU the split
+  reduces bandwidth and edge load but **not** base-station compute; Phase 5 benchmarks it
+  per hardware and reports whichever stage is the bottleneck.
+
 ## Limitations (honest list, kept current)
 
 - **Dispersal is static.** Frank–Wolfe over k candidate paths with BPR congestion is a
@@ -230,3 +280,13 @@ Pydantic models (python/arco_schemas/*.py)
   may differ from August 2023. Scenario files state this.
 - **Local dev runtime.** On this development machine Docker runs under Colima; Compose
   behaviour is identical but GPU passthrough is unavailable, so vision runs on CPU here.
+- **COCO proxy detections are not hazard detections.** Until `scripts/finetune.py` has
+  been run on hazard data, real-model runs report cars as `vehicle_blockage` and groups
+  as `crowd_bottleneck` through a mapping that is labelled as such (`model_id`).
+- **INT8 calibration defaults to seeded noise** when no calibration frames are supplied;
+  the manifest records this. Accuracy claims need real-frame calibration.
+- **`network` stage trusts the clocks.** It is derived from edge and base wall clocks;
+  skew is clamped and counted, not corrected. Host→Colima port forwarding adds tens of ms
+  that a real LAN would not.
+- **Telemetry `pipeline` has no `synthetic` kind** in the contract yet; synthetic runs are
+  labelled through `detector` / `source` instead (contract change requested).
