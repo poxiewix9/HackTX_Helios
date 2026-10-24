@@ -1,0 +1,837 @@
+{
+  "schema_version": "0.2.2",
+  "id": "joplin_2011",
+  "name": "Joplin EF5 tornado, 22 May 2011 (compressed)",
+  "event": "tornado",
+  "event_date": "2011-05-22",
+  "location": "Joplin, Missouri, USA",
+  "bbox": [
+    -94.555,
+    37.045,
+    -94.49,
+    37.09
+  ],
+  "start_time": "2011-05-22T22:34:00Z",
+  "duration_s": 1500,
+  "road_graph_source": "graphml_file",
+  "road_graph_ref": "data/samples/osm/joplin_drive.graphml",
+  "population_cells": [
+    {
+      "id": "cell-downtown-south",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -94.515,
+          37.08
+        ]
+      },
+      "population": 2200
+    },
+    {
+      "id": "cell-west-north",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -94.54,
+          37.078
+        ]
+      },
+      "population": 1600
+    },
+    {
+      "id": "cell-26th-corridor",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -94.525,
+          37.058
+        ]
+      },
+      "population": 2400
+    },
+    {
+      "id": "cell-20th-main",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -94.512,
+          37.0665
+        ]
+      },
+      "population": 1800
+    },
+    {
+      "id": "cell-south-joplin",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -94.52,
+          37.048
+        ]
+      },
+      "population": 1500
+    },
+    {
+      "id": "cell-southwest",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -94.545,
+          37.049
+        ]
+      },
+      "population": 1200
+    }
+  ],
+  "safe_zones": [
+    {
+      "id": "shelter-north-memorial-hall",
+      "name": "North shelter (approx. Memorial Hall, 8th & Joplin Ave)",
+      "geom": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.5142,
+              37.0855
+            ],
+            [
+              -94.51180000000001,
+              37.0855
+            ],
+            [
+              -94.51180000000001,
+              37.0875
+            ],
+            [
+              -94.5142,
+              37.0875
+            ],
+            [
+              -94.5142,
+              37.0855
+            ]
+          ]
+        ]
+      },
+      "capacity": 6000
+    },
+    {
+      "id": "shelter-south-32nd",
+      "name": "South shelter (approx. 32nd St & Main St)",
+      "geom": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.5142,
+              37.045500000000004
+            ],
+            [
+              -94.51180000000001,
+              37.045500000000004
+            ],
+            [
+              -94.51180000000001,
+              37.0475
+            ],
+            [
+              -94.5142,
+              37.0475
+            ],
+            [
+              -94.5142,
+              37.045500000000004
+            ]
+          ]
+        ]
+      },
+      "capacity": 5000
+    }
+  ],
+  "macro_feed": {
+    "tiles": [
+      {
+        "tile_id": "tile-joplin-0",
+        "path": "samples/joplin/tile_joplin_0.png",
+        "georef": {
+          "kind": "tile",
+          "tile_id": "tile-joplin-0",
+          "bounds": [
+            -94.555,
+            37.045,
+            -94.49,
+            37.09
+          ],
+          "affine": [
+            6.347656250001166e-05,
+            0.0,
+            -94.555,
+            0.0,
+            -4.3945312500001665e-05,
+            37.09
+          ],
+          "image_width": 1024,
+          "image_height": 1024
+        }
+      }
+    ],
+    "frames": []
+  },
+  "micro_feeds": [
+    {
+      "camera_id": "cam-main-20th",
+      "lat": 37.064,
+      "lon": -94.5135,
+      "heading_deg": 180.0,
+      "fov_deg": 70.0,
+      "video_path": null,
+      "calibration": {
+        "kind": "camera",
+        "camera_id": "cam-main-20th",
+        "lat": 37.064,
+        "lon": -94.5135,
+        "heading_deg": 180.0,
+        "fov_deg": 70.0,
+        "image_width": 1280,
+        "image_height": 720,
+        "image_points": [
+          [
+            200,
+            700
+          ],
+          [
+            1080,
+            700
+          ],
+          [
+            420,
+            480
+          ],
+          [
+            860,
+            480
+          ],
+          [
+            560,
+            420
+          ],
+          [
+            720,
+            420
+          ]
+        ],
+        "world_points": [
+          [
+            -94.5134621,
+            37.0639337
+          ],
+          [
+            -94.5135379,
+            37.0639337
+          ],
+          [
+            -94.5134678,
+            37.0638926
+          ],
+          [
+            -94.5135322,
+            37.0638926
+          ],
+          [
+            -94.5134855,
+            37.063869
+          ],
+          [
+            -94.5135145,
+            37.063869
+          ]
+        ]
+      },
+      "synthetic_overlays": [
+        {
+          "t": 300,
+          "hazard_class": "debris",
+          "bbox_px": [
+            380,
+            470,
+            820,
+            680
+          ],
+          "duration_s": 1000
+        }
+      ]
+    },
+    {
+      "camera_id": "cam-26th-mcclelland",
+      "lat": 37.0548,
+      "lon": -94.53,
+      "heading_deg": 270.0,
+      "fov_deg": 70.0,
+      "video_path": null,
+      "calibration": {
+        "kind": "camera",
+        "camera_id": "cam-26th-mcclelland",
+        "lat": 37.0548,
+        "lon": -94.53,
+        "heading_deg": 270.0,
+        "fov_deg": 70.0,
+        "image_width": 1280,
+        "image_height": 720,
+        "image_points": [
+          [
+            200,
+            700
+          ],
+          [
+            1080,
+            700
+          ],
+          [
+            420,
+            480
+          ],
+          [
+            860,
+            480
+          ],
+          [
+            560,
+            420
+          ],
+          [
+            720,
+            420
+          ]
+        ],
+        "world_points": [
+          [
+            -94.5300831,
+            37.0547697
+          ],
+          [
+            -94.5300831,
+            37.0548303
+          ],
+          [
+            -94.5301346,
+            37.0547743
+          ],
+          [
+            -94.5301346,
+            37.0548257
+          ],
+          [
+            -94.5301641,
+            37.0547884
+          ],
+          [
+            -94.5301641,
+            37.0548116
+          ]
+        ]
+      },
+      "synthetic_overlays": [
+        {
+          "t": 240,
+          "hazard_class": "debris",
+          "bbox_px": [
+            300,
+            450,
+            1000,
+            700
+          ],
+          "duration_s": null
+        },
+        {
+          "t": 700,
+          "hazard_class": "crowd_bottleneck",
+          "bbox_px": [
+            450,
+            380,
+            850,
+            560
+          ],
+          "duration_s": 500
+        }
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "t": 0,
+      "type": "note",
+      "note": "17:34 CDT: tornado touches down just west of Joplin and tracks east-northeast across the south side of the city. Times COMPRESSED (~2.5 h → 25 min)."
+    },
+    {
+      "t": 45,
+      "type": "hazard_appear",
+      "hazard_id": "swath",
+      "hazard_class": "tornado_swath",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.555,
+              37.0525
+            ],
+            [
+              -94.54,
+              37.055
+            ],
+            [
+              -94.54,
+              37.066
+            ],
+            [
+              -94.555,
+              37.0635
+            ],
+            [
+              -94.555,
+              37.0525
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.8,
+      "stream": "macro",
+      "camera_id": "tile-joplin-0",
+      "velocity_m_s": 12.0,
+      "note": "Damage swath forming west of Schifferdecker Ave (approximate)."
+    },
+    {
+      "t": 90,
+      "type": "hazard_update",
+      "hazard_id": "swath",
+      "hazard_class": "tornado_swath",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.555,
+              37.0525
+            ],
+            [
+              -94.525,
+              37.055
+            ],
+            [
+              -94.525,
+              37.066
+            ],
+            [
+              -94.555,
+              37.0635
+            ],
+            [
+              -94.555,
+              37.0525
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.85,
+      "stream": "macro",
+      "camera_id": "tile-joplin-0",
+      "velocity_m_s": 12.0,
+      "note": "Swath reaches St. John's Regional Medical Center (26th & McClelland)."
+    },
+    {
+      "t": 135,
+      "type": "hazard_update",
+      "hazard_id": "swath",
+      "hazard_class": "tornado_swath",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.555,
+              37.0525
+            ],
+            [
+              -94.505,
+              37.055
+            ],
+            [
+              -94.505,
+              37.066
+            ],
+            [
+              -94.555,
+              37.0635
+            ],
+            [
+              -94.555,
+              37.0525
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.9,
+      "stream": "macro",
+      "camera_id": "tile-joplin-0",
+      "velocity_m_s": 12.0,
+      "note": "Swath crosses Main St around 20th–26th St (Joplin High School area)."
+    },
+    {
+      "t": 180,
+      "type": "hazard_update",
+      "hazard_id": "swath",
+      "hazard_class": "tornado_swath",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.555,
+              37.0525
+            ],
+            [
+              -94.49,
+              37.055
+            ],
+            [
+              -94.49,
+              37.066
+            ],
+            [
+              -94.555,
+              37.0635
+            ],
+            [
+              -94.555,
+              37.0525
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.9,
+      "stream": "macro",
+      "camera_id": "tile-joplin-0",
+      "velocity_m_s": 0.0,
+      "note": "Tornado exits the sample bbox toward Range Line Rd; swath is static from here."
+    },
+    {
+      "t": 200,
+      "type": "cell_network_down",
+      "note": "Cell sites along 20th St destroyed; most of south Joplin without service."
+    },
+    {
+      "t": 240,
+      "type": "hazard_appear",
+      "hazard_id": "collapsed-stjohns",
+      "hazard_class": "collapsed_building",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.53569999999999,
+              37.0537
+            ],
+            [
+              -94.5333,
+              37.0537
+            ],
+            [
+              -94.5333,
+              37.055299999999995
+            ],
+            [
+              -94.53569999999999,
+              37.055299999999995
+            ],
+            [
+              -94.53569999999999,
+              37.0537
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.9,
+      "stream": "macro",
+      "camera_id": "tile-joplin-0",
+      "note": "Hospital tower structurally compromised; surrounding streets impassable."
+    },
+    {
+      "t": 300,
+      "type": "hazard_appear",
+      "hazard_id": "debris-main-20th",
+      "hazard_class": "debris",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.51379999999999,
+              37.0622
+            ],
+            [
+              -94.5132,
+              37.0622
+            ],
+            [
+              -94.5132,
+              37.0628
+            ],
+            [
+              -94.51379999999999,
+              37.0628
+            ],
+            [
+              -94.51379999999999,
+              37.0622
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.75,
+      "stream": "micro",
+      "camera_id": "cam-main-20th",
+      "note": "Debris field across Main St at 20th."
+    },
+    {
+      "t": 330,
+      "type": "hazard_appear",
+      "hazard_id": "blocked-26th",
+      "hazard_class": "blocked_road",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.54,
+              37.054
+            ],
+            [
+              -94.52,
+              37.054
+            ],
+            [
+              -94.52,
+              37.0552
+            ],
+            [
+              -94.54,
+              37.0552
+            ],
+            [
+              -94.54,
+              37.054
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.8,
+      "stream": "macro",
+      "camera_id": "tile-joplin-0",
+      "note": "26th St blocked by downed trees and vehicles."
+    },
+    {
+      "t": 700,
+      "type": "hazard_appear",
+      "hazard_id": "crowd-stjohns",
+      "hazard_class": "crowd_bottleneck",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.5334,
+              37.055299999999995
+            ],
+            [
+              -94.5326,
+              37.055299999999995
+            ],
+            [
+              -94.5326,
+              37.0559
+            ],
+            [
+              -94.5334,
+              37.0559
+            ],
+            [
+              -94.5334,
+              37.055299999999995
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.7,
+      "stream": "micro",
+      "camera_id": "cam-26th-mcclelland",
+      "note": "Self-evacuating patients and volunteers converge at the hospital."
+    },
+    {
+      "t": 900,
+      "type": "hazard_update",
+      "hazard_id": "swath",
+      "hazard_class": "tornado_swath",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -94.555,
+              37.0525
+            ],
+            [
+              -94.49,
+              37.055
+            ],
+            [
+              -94.49,
+              37.066
+            ],
+            [
+              -94.555,
+              37.0635
+            ],
+            [
+              -94.555,
+              37.0525
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.95,
+      "stream": "macro",
+      "camera_id": "tile-joplin-0",
+      "velocity_m_s": 0.0,
+      "note": "Aerial survey confirms the swath."
+    },
+    {
+      "t": 1200,
+      "type": "cell_network_up",
+      "note": "Temporary cell sites on air."
+    },
+    {
+      "t": 1300,
+      "type": "hazard_resolve",
+      "hazard_id": "debris-main-20th",
+      "note": "Main St cleared at 20th."
+    },
+    {
+      "t": 1450,
+      "type": "note",
+      "note": "End of compressed window; search and rescue continues overnight."
+    }
+  ],
+  "community_events": [
+    {
+      "t": 420,
+      "type": "hazard_pin",
+      "lat": 37.0685,
+      "lon": -94.5135,
+      "reporter": "phone-01",
+      "hazard_class": "downed_line",
+      "note": "Power lines down across Main at 15th, sparking"
+    },
+    {
+      "t": 450,
+      "type": "hazard_pin",
+      "lat": 37.0687,
+      "lon": -94.5133,
+      "reporter": "phone-02",
+      "hazard_class": "downed_line",
+      "note": "Lines on the road, don't drive through"
+    },
+    {
+      "t": 800,
+      "type": "confirm",
+      "lat": 37.0626,
+      "lon": -94.5136,
+      "reporter": "phone-03",
+      "target_hazard_id": "debris-main-20th",
+      "note": "Still blocked"
+    },
+    {
+      "t": 1250,
+      "type": "all_clear",
+      "lat": 37.0625,
+      "lon": -94.5135,
+      "reporter": "phone-03",
+      "target_hazard_id": "debris-main-20th",
+      "note": "Loader pushed it clear"
+    },
+    {
+      "t": 1280,
+      "type": "all_clear",
+      "lat": 37.0624,
+      "lon": -94.5134,
+      "reporter": "phone-04",
+      "target_hazard_id": "debris-main-20th",
+      "note": "Confirm, one lane each way"
+    }
+  ],
+  "expected_blocked_edges": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    279,
+    280,
+    281,
+    282,
+    283,
+    298,
+    299,
+    300,
+    301,
+    302,
+    303,
+    304,
+    305,
+    306,
+    357,
+    358,
+    359,
+    360,
+    361,
+    362,
+    363,
+    364,
+    365
+  ],
+  "data_sources": [
+    {
+      "name": "OpenStreetMap contributors via OSMnx (data/samples/osm/joplin_drive.graphml)",
+      "url": "https://www.openstreetmap.org/copyright",
+      "license": "ODbL 1.0",
+      "note": "Present-day drivable road network; the post-2011 rebuild changed some streets."
+    },
+    {
+      "name": "NWS Springfield, MO: Joplin Tornado Event Summary and damage survey",
+      "url": "https://www.weather.gov/sgf/news_events_2011may22",
+      "license": "Public domain (US federal government work)",
+      "note": "Track, width (~1 mile) and timing anchors; the swath polygon is a hand-digitised approximation of the surveyed EF-contours."
+    },
+    {
+      "name": "NIST NCSTAR 3: Technical Investigation of the May 22, 2011 Tornado in Joplin, Missouri",
+      "url": "https://www.nist.gov/publications/final-report-national-institute-standards-and-technology-nist-technical-investigation-may",
+      "license": "Public domain (US federal government work)",
+      "note": "Hospital and school damage, communications failures; used for timeline notes only."
+    }
+  ],
+  "notes": "SIMULATED on real event geometry. Road data: OpenStreetMap (ODbL) present-day snapshot. Track and timing anchors from the NWS Springfield damage survey and NIST NCSTAR 3. The tornado swath and all other polygons are hand-digitised APPROXIMATIONS of the surveyed damage path, stepped west-to-east so routing can be watched reacting perpendicular to the track; the clock is compressed (~2.5 h → 25 min). Population cells and shelters are illustrative. Not a replay of real inference or real sensor data.",
+  "label": "Simulated on real event geometry"
+}

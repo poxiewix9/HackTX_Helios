@@ -16,11 +16,11 @@ and an offline community mesh. See `PROJECT_SPEC.md` for the full specification 
   `brew install colima docker docker-compose && colima start`
 - GNU make
 
-## Quick start (Phases 1–5)
+## Quick start (Phases 1–7)
 
 ```bash
 make bootstrap          # uv sync, pnpm install, .env, pre-commit hooks
-docker compose up -d --wait   # postgres+redis, migrate one-shot, blackboard :8001, base-station :8002, agents :8003, benchmark :8005
+docker compose up -d --wait   # postgres+redis, migrate one-shot, blackboard :8001, base-station :8002, agents :8003, simulator :8004, benchmark :8005
 make healthcheck        # containers healthy, extensions present, Redis PONG, every /health ok
 make ingest-sample      # Lahaina OSM road graph (offline sample) -> road_edges
 curl "localhost:8001/edges?bbox=-156.7,20.86,-156.66,20.9" | head -c 300
@@ -34,6 +34,11 @@ make run-edge FRAMES=25 # synthetic edge node against the compose base station (
 make export-split WEIGHTS=models/yolov8n-seg.pt   # real model: head_int8 + tail + manifest (needs --extra export)
 make bench              # Phase 5 FP32 full vs INT8 split on identical frames -> JSON/CSV (needs the model)
 make bench-show         # table of the committed recorded run (M1 Pro CPU: both miss 80 ms/30 fps, tail-bound)
+make test-consensus     # Phase 6 signed reports, trust, ST-DBSCAN, smoke false-negative override (needs DB)
+make validate-scenarios # Phase 7 data/scenarios/*.json schema + referenced files
+make test-sim           # Phase 7 player tests + Lahaina run through the real agents in-process (needs DB)
+curl -s -X POST localhost:8004/speed -H 'content-type: application/json' -d '{"speed":60}'; curl -s -X POST localhost:8004/play
+make play-scenario SCENARIO=joplin_2011 SPEED=120   # headless CLI player + expected_blocked_edges check
 make schemas            # regenerate JSON Schema + TS types from Pydantic
 make schemas-check      # fail if generated files are stale
 ```
@@ -56,9 +61,9 @@ services/agents/           LangGraph Cartographer + Navigator, penalties.yaml, e
 services/edge-capture/     ONNX split + INT8 head, feature-packet codec, frame sources, edge node
 services/base-station/     tail inference, seg postprocess, class map, georef, hazard writer, telemetry API
 services/benchmark/        A-vs-B harness, pacing/drop model, HardwareInfo, recorded replay on :8005
-services/simulator/        (Phase 7)
+services/simulator/        scenario player (clock/seek/chaos), synthetic street feeds, arco-sim CLI on :8004
 apps/{dashboard,mobile}/   Next.js dashboard, Expo community app (later phases)
-data/{scenarios,samples}/  scenario JSON + small sample assets (vision georefs under samples/vision)
+data/{scenarios,samples}/  Lahaina/Joplin/Camp Fire scenarios + OSM samples (ODbL) + vision georefs
 models/                    exported ONNX heads/tails + manifest.json (gitignored; make export-split)
 scripts/                   healthcheck, loop_check (agent hook), export_split.py, finetune.py
 docs/                      ARCHITECTURE.md

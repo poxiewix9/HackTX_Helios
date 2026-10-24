@@ -597,10 +597,16 @@ class Consensus:
     # ------------------------------------------------------------------ helpers
 
     def _target(self, report: CommunityReport, radius_m: float) -> Hazard | None:
+        """The hazard a confirm/deny/all_clear is about. An explicit `target_hazard_id` is
+        binding: if that hazard is no longer active the report is moot and must NOT be
+        re-aimed at whatever else is nearby (a stale all_clear on cleared debris would
+        otherwise dispute the fire that has since reached the same street). Without an
+        explicit target, only a hazard of the *same class* within `radius_m` qualifies."""
         if report.target_hazard_id is not None:
             h = self.service.get_hazard(report.target_hazard_id)
-            if h is not None and h.status == "active":
-                return h
+            return h if h is not None and h.status == "active" else None
+        if report.hazard_class is None:
+            return None
         lon, lat = report.geom.coordinates[0], report.geom.coordinates[1]
         near = self._hazards_near(
             lon, lat, radius_m=radius_m, cls=report.hazard_class, status="active", sources=None

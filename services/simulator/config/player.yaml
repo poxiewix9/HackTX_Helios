@@ -1,0 +1,24 @@
+# Scenario player policy. No coordinates here; scenarios carry geometry.
+
+hazards:
+  # Scripted hazards are resolved by the timeline (hazard_resolve), not by TTL. The TTL only
+  # guards against a player that dies mid-scenario leaving hazards active forever.
+  ttl_s: 21600
+  # Severity per class comes from arco_schemas.HAZARD_CLASSES[cls].default_severity.
+  source: simulated
+
+community:
+  # Reporter keys are Ed25519 keys derived deterministically from
+  # "<seed_prefix>:<scenario id>:<reporter label>" so reruns produce the same reporter_hash
+  # (and two scenario reporters are always two independent devices).
+  key_seed_prefix: arco-sim
+
+clock:
+  hz: 2.0 # clock.tick publish rate while playing (also sent on every state change)
+
+seek:
+  # Seeking forward fires the community events that were skipped (so the community
+  # override still happens when you jump ahead). Seeking backward never "un-sends" a
+  # report (reports are immutable on the blackboard); the cursor is rewound and those
+  # events are re-sent as new reports when playback passes them again.
+  fire_skipped_community_events: true

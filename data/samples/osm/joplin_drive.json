@@ -1,0 +1,17 @@
+{
+  "id": "joplin_drive",
+  "description": "Drivable road network of central/south Joplin, MO, spanning the 2011-05-22 EF5 tornado path; used by the Joplin 2011 scenario.",
+  "graphml": "data/samples/osm/joplin_drive.graphml",
+  "road_graph_source": "osmnx_bbox",
+  "bbox_wsen": "-94.555,37.045,-94.49,37.09",
+  "network_type": "drive",
+  "source": {
+    "name": "OpenStreetMap contributors via OSMnx",
+    "url": "https://www.openstreetmap.org/copyright",
+    "license": "ODbL 1.0",
+    "note": "Snapshot downloaded with OSMnx; current-day road geometry, which may differ from the event date."
+  },
+  "fetched_at": "2026-10-24T21:57:00Z",
+  "nodes": 1632,
+  "edges": 4926
+}

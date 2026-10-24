@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict
 
 from arco_blackboard import __version__, bus
 from arco_blackboard.db import db_reachable, extension_versions, get_engine
+from arco_blackboard.ingest import IngestResult, ingest
 from arco_blackboard.logging import configure_logging, get_logger
 from arco_blackboard.repo import parse_bbox
 from arco_blackboard.service import NO_SCENARIO, BlackboardService
@@ -28,12 +29,14 @@ from arco_schemas import (
     AgentEvent,
     AgentEventMessage,
     BusEnvelope,
+    ClockEvent,
     CommunityReport,
     EdgeOverlap,
     EdgeStatus,
     Hazard,
     HazardEvent,
     HazardStatus,
+    NetworkEvent,
     ReportEvent,
     RoadEdge,
     Route,
@@ -41,6 +44,7 @@ from arco_schemas import (
     SafeZoneEvent,
 )
 from arco_schemas.geo import Geometry
+from arco_schemas.scenario import RoadGraphSource
 
 log = get_logger("blackboard.api")
 
@@ -134,6 +138,42 @@ class HealthResponse(BaseModel):
     tables: dict[str, int]
 
 
+class IngestRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source: RoadGraphSource
+    ref: str
+    network_type: str | None = None
+
+
+class IngestResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source: RoadGraphSource
+    ref: str
+    nodes: int
+    edges: int
+    bbox: list[float]
+    graph_version: int
+
+
+class ClockRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scenario_id: str | None = None
+    scenario_t: float
+    playing: bool
+    speed: float = 1.0
+    duration_s: float | None = None
+
+
+class NetworkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cellular_up: bool
+    reason: str | None = None
+
+
 class EdgeIntersectRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -181,6 +221,7 @@ def create_app(settings: Settings | None = None, *, publisher_name: str = "black
     _hazard_routes(app)
     _edge_routes(app)
     _misc_routes(app)
+    _simulator_routes(app)
     _ws_routes(app)
 
     @app.exception_handler(ValueError)
@@ -284,6 +325,30 @@ def _edge_routes(app: FastAPI) -> None:
     def get_graph_version(service: Svc) -> dict[str, int]:
         return {"graph_version": service.graph_version()}
 
+    @app.post("/graph/ingest", response_model=IngestResponse, status_code=201)
+    def post_graph_ingest(request: Request, body: IngestRequest) -> IngestResponse:
+        """Replace `road_edges` with a road graph (the same code path as
+        `arco-blackboard-ingest`). `graphml_file` is offline; the OSMnx sources download."""
+        service: BlackboardService = request.app.state.service
+        try:
+            res: IngestResult = ingest(
+                body.source,
+                body.ref,
+                engine=request.app.state.engine,
+                publisher=service.publisher,
+                network_type=body.network_type,
+            )
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return IngestResponse(
+            source=res.source,
+            ref=res.ref,
+            nodes=res.nodes,
+            edges=res.edges,
+            bbox=res.bbox,
+            graph_version=res.graph_version,
+        )
+
 
 def _misc_routes(app: FastAPI) -> None:
 
@@ -339,6 +404,29 @@ def _misc_routes(app: FastAPI) -> None:
         topic_set = set(topics.split(",")) if topics else None
         return bus.read_outbox(
             request.app.state.engine, since_seq=since_seq, topics=topic_set, limit=limit
+        )
+
+
+def _simulator_routes(app: FastAPI) -> None:
+    """Scenario clock + simulated network state. The simulator (and the dashboard's chaos
+    button) publish through here so every subscriber sees one scenario clock."""
+
+    @app.post("/clock", response_model=ClockEvent, status_code=201)
+    def post_clock(service: Svc, body: ClockRequest) -> ClockEvent:
+        return service.publish_clock(
+            scenario_id=body.scenario_id,
+            scenario_t=body.scenario_t,
+            playing=body.playing,
+            speed=body.speed,
+            duration_s=body.duration_s,
+        )
+
+    @app.post("/network", response_model=NetworkEvent, status_code=201)
+    def post_network(
+        service: Svc, body: NetworkRequest, scenario_t: ScenarioT = NO_SCENARIO
+    ) -> NetworkEvent:
+        return service.publish_network(
+            cellular_up=body.cellular_up, reason=body.reason, scenario_t=scenario_t
         )
 
 

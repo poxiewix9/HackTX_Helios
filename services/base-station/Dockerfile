@@ -26,14 +26,16 @@ COPY services/agents/pyproject.toml services/agents/pyproject.toml
 COPY services/edge-capture/pyproject.toml services/edge-capture/pyproject.toml
 COPY services/base-station/pyproject.toml services/base-station/pyproject.toml
 COPY services/benchmark/pyproject.toml services/benchmark/pyproject.toml
+COPY services/simulator/pyproject.toml services/simulator/pyproject.toml
 RUN mkdir -p packages/shared-schemas/python/arco_schemas services/blackboard/arco_blackboard \
-             services/agents/arco_agents services/edge-capture/arco_edge services/base-station/arco_base services/benchmark/arco_benchmark \
+             services/agents/arco_agents services/edge-capture/arco_edge services/base-station/arco_base services/benchmark/arco_benchmark services/simulator/arco_sim \
  && touch packages/shared-schemas/python/arco_schemas/__init__.py \
           services/blackboard/arco_blackboard/__init__.py \
           services/agents/arco_agents/__init__.py \
           services/edge-capture/arco_edge/__init__.py \
           services/base-station/arco_base/__init__.py \
-          services/benchmark/arco_benchmark/__init__.py
+          services/benchmark/arco_benchmark/__init__.py \
+          services/simulator/arco_sim/__init__.py
 RUN uv sync --frozen --no-dev --package arco-base-station
 
 COPY packages/shared-schemas packages/shared-schemas

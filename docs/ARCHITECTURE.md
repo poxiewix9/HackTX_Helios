@@ -132,8 +132,9 @@ Pydantic models (python/arco_schemas/*.py)
 | 3     | Cartographer + Navigator (deterministic), SLM behind an interface | **done** (see "Agents internals") |
 | 4     | Split-inference vision: ONNX split + INT8 head, edge-capture, base-station (georef, telemetry, synthetic fallback) | **done** (see "Vision internals") |
 | 5     | Benchmark harness: A vs B on identical frames, JSON/CSV, hardware from the machine, recorded replay | **done** (see "Benchmark internals") |
-| 6     | Consensus agent: signed community reports, trust ledger, ST-DBSCAN, vision-negative override, disputes | **built, in review** (see "Consensus internals") |
-| 7-10  | see `PROJECT_SPEC.md` §8                | pending     |
+| 6     | Consensus agent: signed community reports, trust ledger, ST-DBSCAN, vision-negative override, disputes | **done** (see "Consensus internals") |
+| 7     | Simulator: scenario player (clock, seek, chaos), Lahaina / Joplin / Camp Fire scenarios on real OSM geometry, synthetic street feeds | **built, in review** (see "Simulator internals") |
+| 8-10  | see `PROJECT_SPEC.md` §8                | pending     |
 
 ## Blackboard internals (Phase 2)
 
@@ -320,6 +321,53 @@ Pydantic models (python/arco_schemas/*.py)
   (`services/agents/tests/test_consensus.py`, including the end-to-end smoke
   false-negative → community hazard → penalize/sever → reroute test).
 
+## Simulator internals (Phase 7)
+
+`services/simulator` (`arco_sim`) is a **pure HTTP client** of the blackboard and agents.
+It holds no DB credentials and never writes `road_edges` / `routes` directly; a scripted
+hazard goes through exactly the path a vision detection takes (`POST /hazards` → outbox →
+Cartographer → Navigator), so what the dashboard shows during a scenario is the real
+pipeline reacting, labelled `Simulated on real event geometry`.
+
+```
+Scenario JSON ─▶ Player ─┬─ timeline events ──▶ POST /hazards (uuid5 ids, source="simulated")
+                         ├─ community events ─▶ POST /reports (Ed25519-signed, per-phone seeded keys)
+                         ├─ network events ───▶ POST /network   (network.cellular)
+                         ├─ clock (2 Hz) ─────▶ POST /clock     (clock.tick: t, playing, speed)
+                         └─ feeds ───────────▶ GET /feeds/<cam>/frame.jpg (cv2 synthetic, watermarked)
+```
+
+- **Clock is the only source of truth.** `advance(dt)` merges timeline and community
+  events in time order and fires each at its own `t`; wall-clock playback (`tick()`) is
+  `dt = wall_elapsed × speed`. `seek(t)` reconciles rather than replays: hazards whose
+  activation is now in the future are resolved, skipped pins are fired, the network state
+  is restored — all through HTTP.
+- **Blackboard additions for the simulator**: `POST /graph/ingest` (load a committed
+  GraphML sample by `RoadGraphSource` ref — the simulator never ships its own ingestion),
+  `POST /clock`, `POST /network`. `replace_routes` now retires *every* current route before
+  inserting the new publication, so a route through a severed edge cannot survive from an
+  earlier graph version.
+- **Scenario files** (`data/scenarios/*.json`) carry `data_sources` + `notes` with licence
+  and the "digitised approximation" statement, population cells, micro feeds with camera
+  georef + synthetic overlays, macro tiles, and `expected_blocked_edges` (a 40-edge sample
+  of what the real pipeline severs by the end; measured, not assumed). Polygons are
+  shaped so that each scenario keeps at least one open corridor: Lahaina ends with 3/6
+  cells routed, Joplin 4/6, Camp Fire 2/5 — the unreachable cells sit inside the real
+  fire / tornado footprint.
+- **Determinism**: hazard ids `uuid5(SIM_NS, "<scenario>:<hazard_id>")`; reporter keys
+  `DeviceKey.from_seed("arco-sim:<scenario>:<reporter>")`; seeded frame noise per camera.
+- **Consensus fix found by the simulator**: a stale `all_clear` targeted at a *resolved*
+  hazard used to fall through to the nearest active hazard of the same class and dispute
+  it (re-opening hundreds of edges through a live fire front). `_target` is now binding on
+  `target_hazard_id`; regression test `test_stale_targeted_denial_never_retargets_another_hazard`.
+- **Tests** (`make test-sim`, 14): scenario schema/data checks, feed rendering (watermark
+  present, overlays appear at the scripted `t`), player unit tests against a fake
+  blackboard (chronological firing, wall-clock speed/pause, seek reconciliation, signed
+  pins verify, chaos), and an integration run of the full Lahaina timeline through the
+  blackboard REST API and the real `Pipeline` in-process — asserting `hazard.applied`,
+  `routes.recomputed`, `community.hazard.created`, the cellular-down event and the final
+  `clock.tick`.
+
 ## Limitations (honest list, kept current)
 
 - **Dispersal is static.** Frank–Wolfe over k candidate paths with BPR congestion is a
@@ -338,6 +386,10 @@ Pydantic models (python/arco_schemas/*.py)
 - **Not a replay of real inference.** Scenario playback injects scripted hazards through
   the blackboard path. Real inference only runs when model files are present and
   `ARCO_DETECTOR` selects them.
+- **Scenario timelines are compressed and scripted.** 1500–1800 s of scenario time stand
+  in for hours of real events; fire-front and swath positions are interpolated between a
+  handful of hand-digitised polygons, and `expected_blocked_edges` is a sample of the
+  severed set measured on the present-day OSM graph, not a ground-truth closure list.
 - **Benchmark numbers are hardware-specific.** The harness reports the machine it ran on;
   recorded runs are labelled `RECORDED`. If the 80 ms / 30 FPS target is missed, the
   bottleneck stage is reported instead of hidden — and on the CPU-only dev machine it

@@ -126,5 +126,22 @@ else
   fi
 fi
 
+echo "== simulator api =="
+sim_port="${SIMULATOR_PORT:-8004}"
+if [[ "$(status simulator)" == "" ]]; then
+  echo "  not running (optional; start with: docker compose up -d simulator)"
+else
+  for _ in $(seq 1 30); do
+    [[ "$(status simulator)" == "healthy" ]] && break
+    sleep 2
+  done
+  if body="$(curl -fsS "http://localhost:${sim_port}/health" 2>/dev/null)"; then
+    echo "  $body"
+    echo "$body" | grep -q '"status":"ok"' || { echo "  status not ok"; fail=1; }
+  else
+    echo "  GET /health failed on port ${sim_port}"; fail=1
+  fi
+fi
+
 if (( fail )); then echo "healthcheck: FAIL"; exit 1; fi
 echo "healthcheck: OK"

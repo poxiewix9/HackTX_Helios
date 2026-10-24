@@ -428,15 +428,11 @@ def list_safe_zones(session: Session) -> list[SafeZone]:
 
 
 def replace_routes(session: Session, routes: Iterable[Route]) -> list[Route]:
-    """Mark previous routes for the affected crowd groups non-current; insert new ones."""
+    """Publish the complete current route set: every previously current route becomes
+    non-current (including groups that no longer exist, e.g. a cell that became
+    unreachable), then the new ones are inserted. History is kept for the audit trail."""
     routes = list(routes)
-    groups = {r.crowd_group_id for r in routes}
-    if groups:
-        session.execute(
-            update(RouteRow)
-            .where(RouteRow.crowd_group_id.in_(groups), RouteRow.is_current.is_(True))
-            .values(is_current=False)
-        )
+    session.execute(update(RouteRow).where(RouteRow.is_current.is_(True)).values(is_current=False))
     session.add_all(convert.route_to_row(r, is_current=True) for r in routes)
     session.flush()
     return routes

@@ -1,0 +1,17 @@
+{
+  "id": "paradise_drive",
+  "description": "Drivable road network of Paradise, CA (Butte County), used by the Camp Fire 2018 scenario.",
+  "graphml": "data/samples/osm/paradise_drive.graphml",
+  "road_graph_source": "osmnx_bbox",
+  "bbox_wsen": "-121.645,39.735,-121.575,39.795",
+  "network_type": "drive",
+  "source": {
+    "name": "OpenStreetMap contributors via OSMnx",
+    "url": "https://www.openstreetmap.org/copyright",
+    "license": "ODbL 1.0",
+    "note": "Snapshot downloaded with OSMnx; current-day road geometry, which may differ from the event date."
+  },
+  "fetched_at": "2026-10-24T22:02:31Z",
+  "nodes": 1530,
+  "edges": 3392
+}

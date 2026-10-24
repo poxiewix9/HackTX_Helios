@@ -16,9 +16,9 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 | 4.1  | vision     | 1.2        | Export, split, quantize                       | `make test-split`                                 | DONE        | see log 4.1 |
 | 4.2  | vision     | 4.1,2.2    | Edge capture + base station + georef          | `make test-vision-e2e`                            | DONE        | see log 4.2 |
 | 5.1  | benchmark  | 4.2        | FP32 vs split benchmark + recorded replay     | `make bench`                                      | DONE        | see log 5.1 |
-| 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | IN_REVIEW   | see log 6.1 |
-| 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | TODO        |          |
-| 7.2  | simulator  | 7.1        | Lahaina, Joplin, Camp Fire scenarios          | `make validate-scenarios`                         | TODO        |          |
+| 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | DONE        | see log 6.1 |
+| 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | IN_REVIEW   | see log 7.1 |
+| 7.2  | simulator  | 7.1        | Lahaina, Joplin, Camp Fire scenarios          | `make validate-scenarios`                         | IN_REVIEW   | see log 7.2 |
 | 8.1  | dashboard  | 1.2        | Dashboard shell against mock feed             | `pnpm --filter dashboard test`                    | TODO        |          |
 | 8.2  | dashboard  | 8.1,7.1    | Overlays, snap animation, Three.js layers     | `pnpm --filter dashboard e2e`                     | TODO        |          |
 | 8.3  | dashboard  | 5.1,8.2    | Telemetry strip + offline fallback            | `pnpm --filter dashboard e2e`                     | TODO        |          |
@@ -243,3 +243,36 @@ $ make test -> 144 passed (pytest) / Test Files 2 passed, Tests 14 passed (vites
 ```
 Covers: Ed25519 sign/verify + tamper (moved pin, swapped pubkey, swapped pubkey+hash all rejected), canonical bytes stable across JSON round-trip; ST-DBSCAN (space + time separation, chain growth, empty); trust floor/cap and sliding-window rate limit; **smoke false-negative integration**: vision-negative spot on the longest route, phone-1 pin → `report.pending` (no hazard), phone-1 again → still nothing (not independent), phone-2 → `community.hazard.created` (source=community, conf 0.6) → Cartographer penalized/severed the route edge → Navigator rerouted, all in one pipeline run; AgentEvent reasoning contains "vision-negative" and "2 independent"; bus redelivery of that hazard event does not re-run the Cartographer. Also: pins near an active vision hazard corroborate (0.6 → 0.7) instead of duplicating; two independent denials → vision hazard `disputed` with geometry intact (never deleted) and penalties released; community hazard resolved by denial quorum with reporter trust docked; forged signature and 6th/7th report in the window rejected with reasons logged; vision arriving later credits pending pins; Consensus crash isolated (`errors` recorded, Cartographer still severs).
 Live against the compose stack (agents image rebuilt): two signed `POST :8001/reports` at the midpoint of Lahainaluna Road (on the longest current route) → agents log `consensus kind=report.pending` then `community.hazard.created reports=2 hazards=1` → `cartographer penalized=14 graph_version=37` → `navigator routes=6 compute_ms=16.4 trigger=graph.updated`; `/edges` shows the edge `penalized 12.5 → 25.2`; `/health` `consensus_reports_seen=2 known_reporters=2 recent_errors=[]`.
+
+### Phase 6 gate — 2026-10-24 (Orchestrator, after Reviewer pass on 6.1)
+Reviewed: signed reports (Ed25519, canonical JSON), trust ledger with floor/cap/rate limit, ST-DBSCAN clustering, quorum of 2 independent trusted reporters overrides a vision negative and triggers a reroute in one pipeline run, denials dispute (never delete) hazards. Found by the Phase 7 simulator and fixed before the gate: a stale `all_clear` targeted at a *resolved* hazard fell through to the nearest active hazard of the same class and disputed it (re-opened ~400 edges through the live fire front). `Consensus._target` is now binding on `target_hazard_id`; regression `test_stale_targeted_denial_never_retargets_another_hazard`. `make test-consensus` → `10 passed in 6.09s`. 6.1 → DONE.
+
+### 7.1 + 7.2 simulator — 2026-10-24 — 6 iterations
+- it1: `uv run` broke after adding the member (`arco-agents` missing from `tool.uv.sources`) → added `arco-agents` + `arco-simulator`. Overpass fetch for Joplin/Paradise: background shells died silently → foreground fetch; one rate-limit refusal, retried. Graphs committed under `data/samples/osm/{joplin,paradise}_drive.graphml` with ODbL sidecars.
+- it2: the player stamped every event fired by a coarse `advance()` with the final `t` → merged chronological firing of timeline + community events, each at its own `t`. Backward `seek` reconciles through HTTP (resolve / re-fire / restore network), never through SQL.
+- it3: routes through severed edges survived a graph version bump → `replace_routes` now retires every current route before inserting (blackboard, noted in HANDOFFS). Stale `all_clear` disputed the fire front → Consensus `_target` fix (see Phase 6 gate).
+- it4: first polygons closed every exit (all cells unreachable) → reshaped the late-stage polygons against the actual OSM street coordinates and moved two population cells out of the burn footprint so each scenario keeps real corridors: Lahaina 3/6 cells routed at t=1800, Joplin 4/6, Camp Fire 2/5 (unreachable cells sit inside the fire / swath).
+- it5: `expected_blocked_edges` measured by playing each scenario through the real agents (`/tmp` probe), 40-edge sample written per scenario; two tests that encoded the old polygon / empty expectations updated to the real data (no assertion weakened: the chaos test now asserts every expectation is *missing* on the fake blackboard). `InProcessAgents.drain()` loops until the outbox is quiescent. mypy strict on tests: narrowed-bool unreachable warnings → assert on fresh `state()` reads.
+- it6: live compose: `POST /graph/ingest` returned 404 in-container because the blackboard image had no `data/samples/osm` and the simulator sent a host-absolute path → blackboard resolves repo-relative `graphml_file` refs against its own root (and raises `FileNotFoundError` explicitly), simulator sends the ref as written, blackboard image copies `data/samples/osm`. `Player.load(data_dir=)` parameter dropped (unused).
+```
+$ make validate-scenarios
+OK  camp_fire_2018  wildfire  2018-11-08    1800s   13 timeline    5 community  3 cams  sources=3
+OK  joplin_2011     tornado   2011-05-22    1500s   14 timeline    5 community  2 cams  sources=3
+OK  lahaina_2023    wildfire  2023-08-08    1800s   13 timeline    5 community  1 cams  sources=3
+3/3 scenarios valid
+$ make test-sim
+ARCO_REQUIRE_DB=1 uv run pytest services/simulator/tests -q -p no:cacheprovider
+14 passed in 8.41s
+$ uv run mypy services/simulator -> Success: no issues found in 14 source files
+$ make lint -> ruff clean, mypy clean for every service, eslint/prettier/tsc clean
+$ ARCO_REQUIRE_DB=1 make test -> 159 passed (pytest) / 14 passed (vitest)
+$ docker compose up -d --build --wait blackboard agents simulator -> all Healthy
+$ curl :8004/health -> {"status":"ok","label":"Simulated on real event geometry","blackboard":true,"agents":true,"scenario_id":"lahaina_2023",...,"last_error":null}
+$ POST :8004/speed {speed:200}; POST :8004/play; 12 s later GET :8004/state
+  t=1800 playing=false active_hazards=[fire-east, fire-south, smoke-lahainaluna, vehicles-front-north] reports_sent=5 events_fired=18 last_error=null
+$ GET :8004/check -> expected 40 severed 210 missing 0 ok True
+$ GET :8003/health -> routes=3 graph_version=168 consensus_reports_seen=5 consensus_known_reporters=4 scenario_t=1800.0 recent_errors=[]
+$ GET :8001/agent-events -> hazard.applied 137, routes.recomputed 149, community.hazard.created 3, hazard.corroborated 2, hazard.disputed 1, hazard.resolved 3, hazard.expired 2
+$ make healthcheck -> healthcheck: OK (postgres, redis, blackboard, base-station, benchmark, agents, simulator)
+```
+Covers: scenario schema + data-source/licence/approximation notes for all three; chronological firing; wall-clock speed and pause; seek reconciliation (forward fires skipped pins, backward resolves future hazards and restores cellular); deterministic hazard ids and per-phone signed keys (`verify_report` ok, one key per reporter); chaos hazard + cellular; synthetic feed watermark and overlays appearing at the scripted `t`; full Lahaina timeline through the blackboard REST API and the real LangGraph pipeline in-process asserting `hazard.applied`, `routes.recomputed`, `community.hazard.created`, `network.cellular(down)` and the final `clock.tick`.

@@ -5,7 +5,7 @@ SHELL := /bin/bash
 UV      ?= uv
 PNPM    ?= pnpm
 COMPOSE ?= docker compose
-PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents services/edge-capture services/base-station services/benchmark scripts/export_split.py scripts/finetune.py
+PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents services/edge-capture services/base-station services/benchmark services/simulator scripts/export_split.py scripts/finetune.py
 
 # Load .env if present so DATABASE_URL etc. are available to host-side commands.
 ifneq (,$(wildcard .env))
@@ -62,6 +62,7 @@ lint-py:
 	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
 	$(UV) run mypy services/base-station
 	$(UV) run mypy services/benchmark
+	$(UV) run mypy services/simulator
 
 .PHONY: lint-ts
 lint-ts:
@@ -81,6 +82,7 @@ typecheck: ## mypy + tsc only
 	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
 	$(UV) run mypy services/base-station
 	$(UV) run mypy services/benchmark
+	$(UV) run mypy services/simulator
 	$(PNPM) typecheck
 
 .PHONY: test
@@ -163,6 +165,29 @@ test-benchmark: ## Benchmark unit tests (+ a short real run when model files exi
 .PHONY: serve-benchmark
 serve-benchmark: ## Telemetry WS :8005 replaying the newest recorded run (POST /run for a live one)
 	cd services/benchmark && $(UV) run arco-bench serve --port $${BENCHMARK_PORT:-8005}
+
+# ---------------------------------------------------------------------------
+# Simulator (Phase 7)
+# ---------------------------------------------------------------------------
+.PHONY: validate-scenarios
+validate-scenarios: ## 7.2 Validate every data/scenarios/*.json against the Scenario schema + referenced files
+	$(UV) run arco-sim validate
+
+.PHONY: test-sim
+test-sim: ## 7.1 Scenario player unit tests + in-process Lahaina run through the real agents (needs DB)
+	ARCO_REQUIRE_DB=1 $(UV) run pytest services/simulator/tests -q -p no:cacheprovider
+
+.PHONY: serve-simulator
+serve-simulator: ## Run the simulator API on $$SIMULATOR_PORT (default 8004) against ARCO_BLACKBOARD_URL / ARCO_AGENTS_URL
+	$(UV) run uvicorn arco_sim.api:app --host 0.0.0.0 --port $${SIMULATOR_PORT:-8004} --reload --reload-dir services
+
+.PHONY: play-scenario
+play-scenario: ## Play SCENARIO (default lahaina_2023) headless at SPEED into the running blackboard, then check expected_blocked_edges
+	$(UV) run arco-sim play --scenario $(or $(SCENARIO),lahaina_2023) --speed $(or $(SPEED),60) --check
+
+.PHONY: render-feed
+render-feed: ## Render a synthetic street-camera clip: SCENARIO, CAMERA, OUT (mp4), DURATION
+	$(UV) run arco-sim render-feed --scenario $(or $(SCENARIO),lahaina_2023) --camera $(or $(CAMERA),cam-front-st) --out $(or $(OUT),data/cache/feed.mp4) --duration $(or $(DURATION),30)
 
 # ---------------------------------------------------------------------------
 # Agents service (host side)

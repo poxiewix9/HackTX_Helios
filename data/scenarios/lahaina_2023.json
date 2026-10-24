@@ -1,0 +1,730 @@
+{
+  "schema_version": "0.2.2",
+  "id": "lahaina_2023",
+  "name": "Lahaina wildfire, 8 Aug 2023 (compressed)",
+  "event": "wildfire",
+  "event_date": "2023-08-08",
+  "location": "Lahaina, Maui, Hawaii, USA",
+  "bbox": [
+    -156.695,
+    20.862,
+    -156.662,
+    20.897
+  ],
+  "start_time": "2023-08-09T00:55:00Z",
+  "duration_s": 1800,
+  "road_graph_source": "graphml_file",
+  "road_graph_ref": "data/samples/osm/lahaina_drive.graphml",
+  "population_cells": [
+    {
+      "id": "cell-front-st-south",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -156.6725,
+          20.866
+        ]
+      },
+      "population": 1400
+    },
+    {
+      "id": "cell-front-st-central",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -156.6775,
+          20.8745
+        ]
+      },
+      "population": 1800
+    },
+    {
+      "id": "cell-lahainaluna",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -156.6705,
+          20.878
+        ]
+      },
+      "population": 1600
+    },
+    {
+      "id": "cell-wahikuli",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -156.6815,
+          20.885
+        ]
+      },
+      "population": 1500
+    },
+    {
+      "id": "cell-kahoma-village",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -156.679,
+          20.888
+        ]
+      },
+      "population": 1300
+    },
+    {
+      "id": "cell-ainakea",
+      "geom": {
+        "type": "Point",
+        "coordinates": [
+          -156.674,
+          20.885
+        ]
+      },
+      "population": 1400
+    }
+  ],
+  "safe_zones": [
+    {
+      "id": "exit-north-honoapiilani",
+      "name": "North exit (Honoapiilani Hwy toward Kaanapali)",
+      "geom": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.6859,
+              20.894
+            ],
+            [
+              -156.6859,
+              20.896
+            ],
+            [
+              -156.6839,
+              20.896
+            ],
+            [
+              -156.6839,
+              20.894
+            ],
+            [
+              -156.6859,
+              20.894
+            ]
+          ]
+        ]
+      },
+      "capacity": 6000
+    },
+    {
+      "id": "exit-south-honoapiilani",
+      "name": "South exit (Honoapiilani Hwy toward Olowalu)",
+      "geom": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.6705,
+              20.8628
+            ],
+            [
+              -156.6705,
+              20.8648
+            ],
+            [
+              -156.6685,
+              20.8648
+            ],
+            [
+              -156.6685,
+              20.8628
+            ],
+            [
+              -156.6705,
+              20.8628
+            ]
+          ]
+        ]
+      },
+      "capacity": 5000
+    }
+  ],
+  "macro_feed": {
+    "tiles": [
+      {
+        "tile_id": "tile-lahaina-0",
+        "path": "samples/lahaina/tile_lahaina_0.png",
+        "georef": {
+          "kind": "tile",
+          "tile_id": "tile-lahaina-0",
+          "bounds": [
+            -156.685,
+            20.875,
+            -156.67,
+            20.89
+          ],
+          "affine": [
+            1.4648437500014433e-05,
+            0.0,
+            -156.685,
+            0.0,
+            -1.4648437500000555e-05,
+            20.89
+          ],
+          "image_width": 1024,
+          "image_height": 1024
+        }
+      }
+    ],
+    "frames": []
+  },
+  "micro_feeds": [
+    {
+      "camera_id": "cam-front-st",
+      "lat": 20.87452,
+      "lon": -156.67871,
+      "heading_deg": 350.0,
+      "fov_deg": 70.0,
+      "video_path": null,
+      "calibration": {
+        "kind": "camera",
+        "camera_id": "cam-front-st",
+        "lat": 20.87452,
+        "lon": -156.67871,
+        "heading_deg": 350.0,
+        "fov_deg": 70.0,
+        "image_width": 1280,
+        "image_height": 720,
+        "image_points": [
+          [
+            200,
+            700
+          ],
+          [
+            1080,
+            700
+          ],
+          [
+            420,
+            480
+          ],
+          [
+            860,
+            480
+          ],
+          [
+            560,
+            420
+          ],
+          [
+            720,
+            420
+          ]
+        ],
+        "world_points": [
+          [
+            -156.67877,
+            20.87459
+          ],
+          [
+            -156.6786793,
+            20.874605
+          ],
+          [
+            -156.6787725,
+            20.8746488
+          ],
+          [
+            -156.6786984,
+            20.874661
+          ],
+          [
+            -156.6787576,
+            20.8746831
+          ],
+          [
+            -156.678725,
+            20.8746884
+          ]
+        ]
+      },
+      "synthetic_overlays": [
+        {
+          "t": 360,
+          "hazard_class": "smoke",
+          "bbox_px": [
+            250,
+            180,
+            1030,
+            520
+          ],
+          "duration_s": 900
+        },
+        {
+          "t": 480,
+          "hazard_class": "debris",
+          "bbox_px": [
+            420,
+            500,
+            760,
+            660
+          ],
+          "duration_s": 1020
+        },
+        {
+          "t": 1000,
+          "hazard_class": "vehicle_blockage",
+          "bbox_px": [
+            300,
+            430,
+            980,
+            640
+          ],
+          "duration_s": null
+        }
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "t": 0,
+      "type": "note",
+      "note": "Scenario start ≈ 14:55 HST: the morning Lahainaluna fire, declared contained, rekindles upslope in 60+ mph downslope winds (Hurricane Dora pressure gradient). Times below are COMPRESSED (~3 h → 30 min)."
+    },
+    {
+      "t": 30,
+      "type": "hazard_appear",
+      "hazard_id": "fire-east",
+      "hazard_class": "fire_front",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.666,
+              20.88
+            ],
+            [
+              -156.663,
+              20.8805
+            ],
+            [
+              -156.6625,
+              20.877
+            ],
+            [
+              -156.6655,
+              20.8762
+            ],
+            [
+              -156.666,
+              20.88
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.85,
+      "stream": "macro",
+      "camera_id": "tile-lahaina-0",
+      "velocity_m_s": 1.5,
+      "note": "Flare-up east of the Lahaina Bypass near Lahainaluna Rd (approximate origin area)."
+    },
+    {
+      "t": 120,
+      "type": "hazard_update",
+      "hazard_id": "fire-east",
+      "hazard_class": "fire_front",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.67,
+              20.881
+            ],
+            [
+              -156.663,
+              20.8812
+            ],
+            [
+              -156.6625,
+              20.8755
+            ],
+            [
+              -156.669,
+              20.875
+            ],
+            [
+              -156.67,
+              20.881
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.9,
+      "stream": "macro",
+      "camera_id": "tile-lahaina-0",
+      "velocity_m_s": 1.5,
+      "note": "Front crosses the bypass and runs downslope along Lahainaluna Rd."
+    },
+    {
+      "t": 240,
+      "type": "hazard_appear",
+      "hazard_id": "smoke-lahainaluna",
+      "hazard_class": "smoke",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.6765,
+              20.8765
+            ],
+            [
+              -156.6695,
+              20.8765
+            ],
+            [
+              -156.6695,
+              20.880499999999998
+            ],
+            [
+              -156.6765,
+              20.880499999999998
+            ],
+            [
+              -156.6765,
+              20.8765
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.7,
+      "stream": "macro",
+      "camera_id": "tile-lahaina-0",
+      "velocity_m_s": 3.0,
+      "note": "Smoke column blown west over Lahainaluna Rd / Kuialua St."
+    },
+    {
+      "t": 300,
+      "type": "cell_network_down",
+      "note": "Cell sites lose power / burn; 911 and alerts degrade (MPD after-action report)."
+    },
+    {
+      "t": 360,
+      "type": "camera_obscured",
+      "camera_id": "cam-front-st",
+      "note": "Front St camera obscured by dense smoke: street-level vision goes blind here (the smoke false-negative)."
+    },
+    {
+      "t": 480,
+      "type": "hazard_appear",
+      "hazard_id": "debris-front-st",
+      "hazard_class": "debris",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.67882,
+              20.872419999999998
+            ],
+            [
+              -156.67837999999998,
+              20.872419999999998
+            ],
+            [
+              -156.67837999999998,
+              20.87278
+            ],
+            [
+              -156.67882,
+              20.87278
+            ],
+            [
+              -156.67882,
+              20.872419999999998
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.7,
+      "stream": "micro",
+      "camera_id": "cam-front-st",
+      "note": "Downed poles / debris on Front St near Dickenson St."
+    },
+    {
+      "t": 600,
+      "type": "hazard_update",
+      "hazard_id": "fire-east",
+      "hazard_class": "fire_front",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.678,
+              20.879
+            ],
+            [
+              -156.663,
+              20.8812
+            ],
+            [
+              -156.6625,
+              20.8755
+            ],
+            [
+              -156.6765,
+              20.8745
+            ],
+            [
+              -156.678,
+              20.879
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.95,
+      "stream": "macro",
+      "camera_id": "tile-lahaina-0",
+      "velocity_m_s": 1.2,
+      "note": "Front reaches the Honoapiilani Hwy / Lahainaluna Rd area."
+    },
+    {
+      "t": 720,
+      "type": "hazard_appear",
+      "hazard_id": "fire-south",
+      "hazard_class": "fire_front",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.6775,
+              20.87
+            ],
+            [
+              -156.6742,
+              20.8703
+            ],
+            [
+              -156.674,
+              20.8676
+            ],
+            [
+              -156.6772,
+              20.8673
+            ],
+            [
+              -156.6775,
+              20.87
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.8,
+      "stream": "macro",
+      "camera_id": "tile-lahaina-0",
+      "velocity_m_s": 0.5,
+      "note": "Spot fire south of Shaw St."
+    },
+    {
+      "t": 1000,
+      "type": "hazard_appear",
+      "hazard_id": "vehicles-front-north",
+      "hazard_class": "vehicle_blockage",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.67974999999998,
+              20.87975
+            ],
+            [
+              -156.67925,
+              20.87975
+            ],
+            [
+              -156.67925,
+              20.88015
+            ],
+            [
+              -156.67974999999998,
+              20.88015
+            ],
+            [
+              -156.67974999999998,
+              20.87975
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.75,
+      "stream": "micro",
+      "camera_id": "cam-front-st",
+      "note": "Gridlock on Front St north of Papalaua St."
+    },
+    {
+      "t": 1200,
+      "type": "hazard_update",
+      "hazard_id": "fire-east",
+      "hazard_class": "fire_front",
+      "hazard_polygon_geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -156.6805,
+              20.8795
+            ],
+            [
+              -156.663,
+              20.881
+            ],
+            [
+              -156.6625,
+              20.874
+            ],
+            [
+              -156.679,
+              20.873
+            ],
+            [
+              -156.6805,
+              20.8795
+            ]
+          ]
+        ]
+      },
+      "confidence": 0.97,
+      "stream": "macro",
+      "camera_id": "tile-lahaina-0",
+      "velocity_m_s": 0.6,
+      "note": "Fire reaches the shoreline through the town core between Papalaua St and Shaw St; the highway north of Wahikuli and south of Shaw St is still passable (approximate)."
+    },
+    {
+      "t": 1500,
+      "type": "hazard_resolve",
+      "hazard_id": "debris-front-st",
+      "note": "Debris cleared by residents (community all_clear corroborates)."
+    },
+    {
+      "t": 1750,
+      "type": "note",
+      "note": "End of compressed window (≈ 18:00 HST). Fire continued into the night; this scenario stops here."
+    }
+  ],
+  "community_events": [
+    {
+      "t": 400,
+      "type": "hazard_pin",
+      "lat": 20.8766,
+      "lon": -156.67905,
+      "reporter": "phone-01",
+      "hazard_class": "smoke",
+      "note": "Can't see past Papalaua St, smoke across Front St"
+    },
+    {
+      "t": 430,
+      "type": "hazard_pin",
+      "lat": 20.8764,
+      "lon": -156.6789,
+      "reporter": "phone-02",
+      "hazard_class": "smoke",
+      "note": "Thick smoke, road not passable"
+    },
+    {
+      "t": 900,
+      "type": "confirm",
+      "lat": 20.87262,
+      "lon": -156.67862,
+      "reporter": "phone-03",
+      "target_hazard_id": "debris-front-st",
+      "note": "Poles down across both lanes"
+    },
+    {
+      "t": 1450,
+      "type": "all_clear",
+      "lat": 20.87262,
+      "lon": -156.67858,
+      "reporter": "phone-02",
+      "target_hazard_id": "debris-front-st",
+      "note": "Pushed the debris aside, one lane open"
+    },
+    {
+      "t": 1470,
+      "type": "all_clear",
+      "lat": 20.87258,
+      "lon": -156.67866,
+      "reporter": "phone-04",
+      "target_hazard_id": "debris-front-st",
+      "note": "Confirm: passable now"
+    }
+  ],
+  "expected_blocked_edges": [
+    2,
+    3,
+    4,
+    5,
+    10,
+    11,
+    23,
+    24,
+    25,
+    26,
+    28,
+    29,
+    30,
+    31,
+    39,
+    40,
+    41,
+    51,
+    52,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    84,
+    89,
+    90
+  ],
+  "data_sources": [
+    {
+      "name": "OpenStreetMap contributors via OSMnx (data/samples/osm/lahaina_drive.graphml)",
+      "url": "https://www.openstreetmap.org/copyright",
+      "license": "ODbL 1.0",
+      "note": "Present-day drivable road network; roads may differ from August 2023."
+    },
+    {
+      "name": "Maui Police Department, Preliminary After-Action Report, Lahaina Fire (Feb 2024)",
+      "url": "https://www.mauicounty.gov/",
+      "license": "Public record (County of Maui)",
+      "note": "Timeline anchors: ~14:55 rekindle near Lahainaluna Rd, cell outages, Front St gridlock. Times compressed ~6x; positions digitised by hand."
+    },
+    {
+      "name": "NIFC / InciWeb Lahaina fire perimeter (public domain, US Government)",
+      "url": "https://data-nifc.opendata.arcgis.com/",
+      "license": "Public domain (US federal government work)",
+      "note": "Final perimeter used only as the envelope for the hand-digitised, time-stepped fire_front polygons; intermediate fronts are approximations, not surveyed isochrones."
+    }
+  ],
+  "notes": "SIMULATED on real event geometry. Road data: OpenStreetMap (ODbL) present-day snapshot. Timeline anchors from the Maui Police Department preliminary after-action report; fire envelope from the public NIFC perimeter. All hazard polygons are hand-digitised APPROXIMATIONS and the clock is compressed (~3 hours of the afternoon of 2023-08-08 into 30 scenario minutes). Population cells and exit zones are illustrative (see data/samples/lahaina/demo_population.json). This is not a replay of real inference or of real sensor data, and the street feed is a synthetic rendering.",
+  "label": "Simulated on real event geometry"
+}

@@ -100,7 +100,14 @@ def load_graph(
     source: RoadGraphSource, ref: str, *, network_type: str = "drive"
 ) -> nx.MultiDiGraph:
     if source == "graphml_file":
-        return ox.load_graphml(ref)
+        # Relative refs (as written in scenario files) are repo-root relative, so the same
+        # ref works on the host, in the blackboard container and from a remote caller.
+        path = Path(ref)
+        if not path.is_absolute():
+            path = _REPO_ROOT / path
+        if not path.is_file():
+            raise FileNotFoundError(f"graphml_file not found: {path}")
+        return ox.load_graphml(path)
     if source == "osmnx_bbox":
         west, south, east, north = parse_bbox_wsen(ref)
         return ox.graph_from_bbox(bbox=(west, south, east, north), network_type=network_type)

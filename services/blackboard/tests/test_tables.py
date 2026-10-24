@@ -185,6 +185,13 @@ def test_routes_replace_marks_previous_non_current(clean_db: Engine) -> None:
         assert len(repo.list_routes(s, current_only=False)) == 2
         assert repo.latest_route_version(s, "g1") == 1
         assert repo.latest_route_version(s, "nope") == -1
+        # a publication is the *complete* current set: a group that disappears (its cell
+        # became unreachable / groups merged) must not linger as a current route
+        other = route(2).model_copy(update={"id": uuid4(), "crowd_group_id": "g2"})
+        repo.replace_routes(s, [other])
+        s.commit()
+        assert [r.crowd_group_id for r in repo.list_routes(s)] == ["g2"]
+        assert len(repo.list_routes(s, current_only=False)) == 3
 
 
 @pytest.mark.integration

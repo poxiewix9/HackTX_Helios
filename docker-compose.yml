@@ -218,5 +218,44 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  # Scenario player (Phase 7). Pure HTTP client of blackboard + agents: it never
+  # touches the DB. Loads the default scenario at startup and waits for /play.
+  simulator:
+    build:
+      context: .
+      dockerfile: services/simulator/Dockerfile
+    container_name: arco-simulator
+    environment:
+      SIMULATOR_PORT: 8004
+      ARCO_BLACKBOARD_URL: http://blackboard:8001
+      ARCO_AGENTS_URL: http://agents:8003
+      ARCO_SCENARIOS_DIR: /app/data/scenarios
+      ARCO_DATA_DIR: /app/data
+      ARCO_DEFAULT_SCENARIO: ${ARCO_DEFAULT_SCENARIO:-lahaina_2023}
+      ARCO_SIM_AUTOLOAD: ${ARCO_SIM_AUTOLOAD:-true}
+      ARCO_SIM_AUTOPLAY_SPEED: ${ARCO_SIM_AUTOPLAY_SPEED:-0}
+      ARCO_LOG_LEVEL: ${ARCO_LOG_LEVEL:-INFO}
+      ARCO_LOG_JSON: ${ARCO_LOG_JSON:-true}
+    ports:
+      - "${SIMULATOR_PORT:-8004}:8004"
+    depends_on:
+      blackboard:
+        condition: service_healthy
+      agents:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8004/health', timeout=3); sys.exit(0 if r.status==200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
 volumes:
   pgdata:

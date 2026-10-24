@@ -337,6 +337,57 @@ def test_denials_dispute_vision_but_never_delete_and_resolve_community(
 
 
 @pytest.mark.integration
+def test_stale_targeted_denial_never_retargets_another_hazard(
+    agents: Pipeline, service: BlackboardService
+) -> None:
+    """Regression (found by the Lahaina scenario): two all_clear reports aimed at debris
+    that was *already resolved* must be ignored — not re-aimed at the fire that has since
+    reached the same street."""
+    lon, lat, _ = _route_midpoint(agents, service)
+    debris = make_hazard(
+        square(lon, lat, 0.0002),
+        hazard_class="debris",
+        source="simulated",
+        stream="micro",
+        camera_id="cam-1",
+        confidence=0.7,
+        velocity_m_s=0.0,
+    )
+    fire = make_hazard(
+        square(lon, lat, 0.0030),
+        hazard_class="fire_front",
+        source="simulated",
+        stream="macro",
+        camera_id="tile-1",
+        confidence=0.95,
+        velocity_m_s=1.0,
+    )
+    for hz in (debris, fire):
+        ev = service.upsert_hazard(hz, scenario_t=1.0)
+        agents.run(
+            BusEnvelope(topic="hazard", published_at=datetime.now(UTC), publisher="t", message=ev)
+        )
+    severed_before = {e.id for e in service.list_edges(status="severed")}
+    assert severed_before
+    service.set_hazard_status(debris.id, "resolved", scenario_t=2.0)  # cleared by the timeline
+    d1, d2 = _phone("stale-01"), _phone("stale-02")
+    for phone, t in ((d1, 3.0), (d2, 4.0)):
+        rep = phone.make_report(
+            lon=lon, lat=lat, report_type="all_clear", target_hazard_id=debris.id
+        )
+        out = agents.run(_report_env(service, rep, t))
+        assert _kind(out) == "report.ignored"
+    fire_now = service.get_hazard(fire.id)
+    assert fire_now is not None and fire_now.status == "active"
+    assert fire_now.confidence == pytest.approx(0.95)
+    assert {e.id for e in service.list_edges(status="severed")} == severed_before
+    # an untargeted all_clear (no class) is ignored too; a classed pin still finds its class
+    rep = d1.make_report(lon=lon, lat=lat, report_type="all_clear")
+    assert _kind(agents.run(_report_env(service, rep, 5.0))) == "report.ignored"
+    assert service.get_hazard(fire.id).status == "active"  # type: ignore[union-attr]
+
+
+@pytest.mark.integration
 def test_bad_signature_and_rate_limit_are_rejected_and_logged(
     agents: Pipeline, service: BlackboardService
 ) -> None:

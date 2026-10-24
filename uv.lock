@@ -17,6 +17,7 @@ members = [
     "arco-edge-capture",
     "arco-monorepo",
     "arco-schemas",
+    "arco-simulator",
 ]
 
 [[package]]
@@ -315,6 +316,37 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2.9,<3" }]
+
+[[package]]
+name = "arco-simulator"
+version = "0.1.0"
+source = { editable = "services/simulator" }
+dependencies = [
+    { name = "arco-agents" },
+    { name = "arco-schemas" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "numpy" },
+    { name = "opencv-python-headless" },
+    { name = "pydantic-settings" },
+    { name = "shapely" },
+    { name = "structlog" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "arco-agents", editable = "services/agents" },
+    { name = "arco-schemas", editable = "packages/shared-schemas" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "opencv-python-headless", specifier = ">=4.10" },
+    { name = "pydantic-settings", specifier = ">=2.5" },
+    { name = "shapely", specifier = ">=2.0" },
+    { name = "structlog", specifier = ">=24.4" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+]
 
 [[package]]
 name = "ast-serialize"
