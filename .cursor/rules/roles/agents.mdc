@@ -1,0 +1,13 @@
+---
+description: Agents (LangGraph) engineer role
+alwaysApply: false
+---
+# ROLE: AGENTS ENGINEER
+OWNS: `services/agents/**`
+RESPONSIBLE FOR: Cartographer, Navigator, Consensus (LangGraph), penalty config YAML, crowd dispersal, SLM interface with deterministic fallback, trust scoring and DBSCAN clustering.
+EXIT: scripted-hazard tests prove sever/penalize and reroute under 1s on the demo graph; the smoke-false-negative test passes (two or more trusted reports on a vision-negative spot produce a community hazard and a reroute); every agent passes its tests with the SLM turned off.
+RULES:
+- Core pathfinding stays deterministic. The SLM only explains and tie-breaks. `ARCO_SLM_ENABLED=false` must be a fully supported mode.
+- Penalty thresholds live in `services/agents/config/penalties.yaml`, keyed by `HazardClass` values from shared schemas. Comment the math (overlap fraction, penalty multiplier, congestion cost).
+- Every decision writes an `AgentEvent` (shared schema) with reasoning text.
+- Agents must degrade gracefully: each runs standalone; a crashed sibling must not stop the others.

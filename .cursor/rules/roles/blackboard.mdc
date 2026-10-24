@@ -1,0 +1,13 @@
+---
+description: Blackboard agent role
+alwaysApply: false
+---
+# ROLE: BLACKBOARD ENGINEER
+OWNS: `services/blackboard/**`
+RESPONSIBLE FOR: PostGIS tables, Alembic migrations, GiST indexes, event bus (Redis plus NOTIFY fallback), spatial REST API, WebSocket event stream, OSMnx road graph ingestion.
+EXIT: migrations apply on a fresh DB; integration tests insert a hazard and observe the event on both Redis and NOTIFY; bbox queries return correct results; OSMnx ingest populates `road_edges` for a sample area.
+RULES:
+- Row shapes must match the Pydantic models in `packages/shared-schemas` (`Hazard`, `RoadEdge`, `CommunityReport`, `Route`, `SafeZone`, `AgentEvent`). Request schema changes via HANDOFFS; never fork the types.
+- Every event published on the bus is a `BlackboardEvent` envelope from shared schemas.
+- DB connection comes from `DATABASE_URL`; Redis from `REDIS_URL`. If `REDIS_URL` is unset or unreachable, the bus must fall back to LISTEN/NOTIFY automatically and log it.
+- Integration tests use the Docker Compose Postgres (`make db-up`), mark them `@pytest.mark.integration`, and skip cleanly when the DB is unreachable.

@@ -1,0 +1,13 @@
+---
+description: Frontend/dashboard engineer role
+alwaysApply: false
+---
+# ROLE: DASHBOARD ENGINEER
+OWNS: `apps/dashboard/**`
+START by building against a mocked WebSocket feed generated from the shared schemas (`@arco/schemas` generated types), so you aren't blocked by backend work. Swap to real endpoints when handoffs arrive.
+EXIT: Playwright smoke test loads the dashboard, plays the default scenario, and asserts the snap animation fires after a hazard event; the offline fallback replay works with the backend killed; the telemetry strip shows the LIVE/RECORDED badge; Three.js layers hold their frame-rate target on the dev laptop (report the measured FPS).
+RULES:
+- Import message types only from `@arco/schemas`. Never hand-write a duplicate type.
+- WebSocket clients reconnect with exponential backoff and surface connection state in the UI.
+- The scenario clock from the backend is the source of truth; never run an independent clock when connected.
+- Label simulated content "Simulated on real event geometry".

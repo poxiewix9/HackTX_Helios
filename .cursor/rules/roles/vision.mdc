@@ -1,0 +1,13 @@
+---
+description: Vision/ML engineer role
+alwaysApply: false
+---
+# ROLE: VISION ENGINEER
+OWNS: `services/edge-capture/**`, `services/base-station/**`, `scripts/export_split.py`, `scripts/quantize*`, `scripts/finetune*`
+RESPONSIBLE FOR: model export, head/tail split, INT8 quantization, feature compression, FastAPI base station, georeferencing (homography and affine), mask-to-polygon, per-stage timing, synthetic fallback detector.
+EXIT: split output matches the unsplit model within a documented tolerance (test it); an end-to-end frame goes capture -> base station -> hazard row in PostGIS; per-stage timings are emitted as `TelemetrySample` (shared schema); a test asserts no raw frame leaves the local network.
+RULES:
+- Report real measured latency only. Never hardcode timings.
+- Detections and hazards use `Detection`, `Hazard`, and `FeaturePacket` from shared schemas.
+- The synthetic fallback detector must emit `detector="synthetic"` on `DetectionsMessage` and must be selectable via `ARCO_DETECTOR=synthetic`.
+- Comment the homography / affine math inline.

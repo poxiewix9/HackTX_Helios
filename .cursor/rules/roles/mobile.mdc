@@ -1,0 +1,12 @@
+---
+description: Mobile and mesh engineer role
+alwaysApply: false
+---
+# ROLE: MOBILE ENGINEER
+OWNS: `apps/mobile/**`
+EXIT: the directional-arrow UI renders from a route; CRDT sync converges in tests with packet loss; `SimulatedMeshTransport` passes a partition-and-heal test; a pin dropped on one device appears on another with cellular disabled; the on-device fallback router reroutes around a pinned hazard.
+RULES:
+- `Transport` is the only seam between the CRDT layer and the network. `BleTransport` / `WifiDirectTransport` may be best-effort, but `SimulatedMeshTransport` and `WebSocketRelayTransport` must be fully working and tested.
+- Pins and reports use `CommunityReport` from `@arco/schemas`; reports are signed with a per-device key.
+- The UI shows connectivity state: `cell | mesh | isolated`.
+- Document iOS BLE / Wi-Fi Direct constraints honestly in `apps/mobile/README.md`.

@@ -1,0 +1,45 @@
+---
+description: ARCO global rules for every agent
+alwaysApply: true
+---
+# ARCO GLOBAL RULES
+
+Read `PROJECT_SPEC.md` (the full spec), `TASKS.md`, and `HANDOFFS.md` before doing anything.
+
+## Ground rules
+1. You are one role (see your role file in `.cursor/rules/roles/`). Only edit files in your OWNED paths. If you need a change elsewhere, add a request to `HANDOFFS.md` instead of editing it.
+2. `packages/shared-schemas` is the contract. Only the Architect agent edits it. Everyone else requests changes via HANDOFFS.
+3. Never fake results. No invented latency numbers, no mocked tests that always pass, no weakening or deleting a test to make it pass. Simulated components must be labeled as simulated.
+4. Raw video never leaves the local network. Never add an endpoint that uploads raw frames externally.
+5. Never mark a task DONE unless its exit command(s) actually ran and passed in this session. Paste the command and the last lines of output into the task's log in `TASKS.md`.
+6. Commit small and often with the message format `[role][phase.task] what changed`.
+7. Python: `uv` workspace, Python 3.11, Ruff + mypy strict. TS: pnpm workspace, strict mode, ESLint + Prettier. Run `make lint` before marking anything IN_REVIEW.
+8. Config via `.env` and YAML; never hardcode secrets or coordinates in code. Scenario coordinates live in `data/scenarios/*.json`.
+
+## The loop protocol (every task uses this)
+```
+LOOP (max 6 iterations per task):
+  1. PLAN    - restate the task and its exit criteria in 3 lines
+  2. BUILD   - smallest change that could satisfy the criteria
+  3. VERIFY  - run the exact exit commands (tests, lint, type check, smoke run)
+  4. DIAGNOSE- if failing: read the real error, state the root cause in one line
+  5. FIX     - change the cause, not the symptom; go to VERIFY
+EXIT when: all exit criteria pass -> mark IN_REVIEW, write handoff, pick next task
+STUCK when: the same error appears 3 iterations in a row, OR 6 iterations used
+  -> set task to BLOCKED, write what you tried and what you suspect to
+     `HANDOFFS.md` under "BLOCKERS", then move to the next unblocked task
+```
+Never loop silently past the cap. Never retry the identical fix twice.
+
+## Task states
+`TODO -> IN_PROGRESS -> IN_REVIEW -> DONE` or `BLOCKED`. Update `TASKS.md` whenever state changes. Only the Reviewer (or Orchestrator after Reviewer sign-off) moves a task from IN_REVIEW to DONE.
+
+## Handoff format (append to HANDOFFS.md)
+```
+### [from -> to] YYYY-MM-DD HH:MM  task-id
+What I built: ...
+How to run/test: <exact commands>
+Interfaces I expose / changed: ...
+What I need from you: ...
+Known limitations: ...
+```

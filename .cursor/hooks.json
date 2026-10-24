@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "scripts/loop_check.sh",
+        "timeout": 900,
+        "loop_limit": 25
+      }
+    ]
+  }
+}

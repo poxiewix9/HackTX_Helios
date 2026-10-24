@@ -1,0 +1,3158 @@
+{
+  "$defs": {
+    "AgentEvent": {
+      "additionalProperties": false,
+      "description": "Append-only audit entry (table `agent_events`).",
+      "properties": {
+        "agent": {
+          "enum": [
+            "cartographer",
+            "navigator",
+            "consensus"
+          ],
+          "title": "Agent",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Data",
+          "type": "object"
+        },
+        "edge_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Edge Ids",
+          "type": "array"
+        },
+        "hazard_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Hazard Ids",
+          "type": "array"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "description": "e.g. edge.severed, route.recomputed, hazard.overridden",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "report_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Report Ids",
+          "type": "array"
+        },
+        "route_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Route Ids",
+          "type": "array"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "agent",
+        "kind",
+        "reasoning",
+        "scenario_t",
+        "wall_t"
+      ],
+      "title": "AgentEvent",
+      "type": "object"
+    },
+    "AgentEventMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "$ref": "#/$defs/AgentEvent"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "const": "agent.event",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "event"
+      ],
+      "title": "AgentEventMessage",
+      "type": "object"
+    },
+    "AnyMessage": {
+      "discriminator": {
+        "mapping": {
+          "agent.event": "#/$defs/AgentEventMessage",
+          "clock.tick": "#/$defs/ClockEvent",
+          "detections": "#/$defs/DetectionsMessage",
+          "edge.updated": "#/$defs/EdgeEvent",
+          "graph.updated": "#/$defs/GraphUpdatedEvent",
+          "hazard.created": "#/$defs/HazardEvent",
+          "hazard.disputed": "#/$defs/HazardEvent",
+          "hazard.resolved": "#/$defs/HazardEvent",
+          "hazard.updated": "#/$defs/HazardEvent",
+          "network.cellular": "#/$defs/NetworkEvent",
+          "report.created": "#/$defs/ReportEvent",
+          "routes.updated": "#/$defs/RoutesUpdatedMessage",
+          "safe_zone.updated": "#/$defs/SafeZoneEvent",
+          "telemetry.benchmark": "#/$defs/BenchmarkMessage",
+          "telemetry.sample": "#/$defs/TelemetryMessage"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/DetectionsMessage"
+        },
+        {
+          "$ref": "#/$defs/HazardEvent"
+        },
+        {
+          "$ref": "#/$defs/EdgeEvent"
+        },
+        {
+          "$ref": "#/$defs/GraphUpdatedEvent"
+        },
+        {
+          "$ref": "#/$defs/ReportEvent"
+        },
+        {
+          "$ref": "#/$defs/SafeZoneEvent"
+        },
+        {
+          "$ref": "#/$defs/AgentEventMessage"
+        },
+        {
+          "$ref": "#/$defs/ClockEvent"
+        },
+        {
+          "$ref": "#/$defs/NetworkEvent"
+        },
+        {
+          "$ref": "#/$defs/RoutesUpdatedMessage"
+        },
+        {
+          "$ref": "#/$defs/TelemetryMessage"
+        },
+        {
+          "$ref": "#/$defs/BenchmarkMessage"
+        }
+      ],
+      "title": "AnyMessage"
+    },
+    "BenchmarkMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "$ref": "#/$defs/BenchmarkResult"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "const": "telemetry.benchmark",
+          "default": "telemetry.benchmark",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "result"
+      ],
+      "title": "BenchmarkMessage",
+      "type": "object"
+    },
+    "BenchmarkResult": {
+      "additionalProperties": false,
+      "description": "Aggregate for one pipeline over a benchmark run.",
+      "properties": {
+        "bottleneck_stage": {
+          "anyOf": [
+            {
+              "enum": [
+                "capture",
+                "head",
+                "serialize",
+                "network",
+                "deserialize",
+                "tail",
+                "postprocess",
+                "georef",
+                "db_write"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Slowest stage when the target is missed",
+          "title": "Bottleneck Stage"
+        },
+        "dropped_frames": {
+          "minimum": 0,
+          "title": "Dropped Frames",
+          "type": "integer"
+        },
+        "fps": {
+          "minimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "frames": {
+          "minimum": 0,
+          "title": "Frames",
+          "type": "integer"
+        },
+        "hardware": {
+          "$ref": "#/$defs/HardwareInfo"
+        },
+        "mean_ms": {
+          "minimum": 0,
+          "title": "Mean Ms",
+          "type": "number"
+        },
+        "mean_stage_ms": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "capture",
+              "head",
+              "serialize",
+              "network",
+              "deserialize",
+              "tail",
+              "postprocess",
+              "georef",
+              "db_write"
+            ]
+          },
+          "title": "Mean Stage Ms",
+          "type": "object"
+        },
+        "meets_target": {
+          "title": "Meets Target",
+          "type": "boolean"
+        },
+        "mode": {
+          "enum": [
+            "live",
+            "recorded"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "p50_ms": {
+          "minimum": 0,
+          "title": "P50 Ms",
+          "type": "number"
+        },
+        "p95_ms": {
+          "minimum": 0,
+          "title": "P95 Ms",
+          "type": "number"
+        },
+        "peak_rss_mb": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Rss Mb"
+        },
+        "pipeline": {
+          "enum": [
+            "fp32_full",
+            "int8_split"
+          ],
+          "title": "Pipeline",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "target_fps": {
+          "default": 30.0,
+          "exclusiveMinimum": 0,
+          "title": "Target Fps",
+          "type": "number"
+        },
+        "target_ms": {
+          "default": 80.0,
+          "exclusiveMinimum": 0,
+          "title": "Target Ms",
+          "type": "number"
+        },
+        "total_bytes_sent": {
+          "minimum": 0,
+          "title": "Total Bytes Sent",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mode",
+        "pipeline",
+        "run_id",
+        "started_at",
+        "hardware",
+        "frames",
+        "dropped_frames",
+        "mean_ms",
+        "p50_ms",
+        "p95_ms",
+        "fps",
+        "mean_stage_ms",
+        "total_bytes_sent",
+        "meets_target"
+      ],
+      "title": "BenchmarkResult",
+      "type": "object"
+    },
+    "BlackboardMessage": {
+      "discriminator": {
+        "mapping": {
+          "agent.event": "#/$defs/AgentEventMessage",
+          "clock.tick": "#/$defs/ClockEvent",
+          "edge.updated": "#/$defs/EdgeEvent",
+          "graph.updated": "#/$defs/GraphUpdatedEvent",
+          "hazard.created": "#/$defs/HazardEvent",
+          "hazard.disputed": "#/$defs/HazardEvent",
+          "hazard.resolved": "#/$defs/HazardEvent",
+          "hazard.updated": "#/$defs/HazardEvent",
+          "network.cellular": "#/$defs/NetworkEvent",
+          "report.created": "#/$defs/ReportEvent",
+          "safe_zone.updated": "#/$defs/SafeZoneEvent"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/HazardEvent"
+        },
+        {
+          "$ref": "#/$defs/EdgeEvent"
+        },
+        {
+          "$ref": "#/$defs/GraphUpdatedEvent"
+        },
+        {
+          "$ref": "#/$defs/ReportEvent"
+        },
+        {
+          "$ref": "#/$defs/SafeZoneEvent"
+        },
+        {
+          "$ref": "#/$defs/AgentEventMessage"
+        },
+        {
+          "$ref": "#/$defs/ClockEvent"
+        },
+        {
+          "$ref": "#/$defs/NetworkEvent"
+        }
+      ],
+      "title": "BlackboardMessage"
+    },
+    "BusEnvelope": {
+      "additionalProperties": false,
+      "description": "What travels on Redis pub/sub channel `blackboard.<topic>` and on Postgres\nNOTIFY `blackboard_events`. `message` is any typed message above.",
+      "properties": {
+        "message": {
+          "discriminator": {
+            "mapping": {
+              "agent.event": "#/$defs/AgentEventMessage",
+              "clock.tick": "#/$defs/ClockEvent",
+              "detections": "#/$defs/DetectionsMessage",
+              "edge.updated": "#/$defs/EdgeEvent",
+              "graph.updated": "#/$defs/GraphUpdatedEvent",
+              "hazard.created": "#/$defs/HazardEvent",
+              "hazard.disputed": "#/$defs/HazardEvent",
+              "hazard.resolved": "#/$defs/HazardEvent",
+              "hazard.updated": "#/$defs/HazardEvent",
+              "network.cellular": "#/$defs/NetworkEvent",
+              "report.created": "#/$defs/ReportEvent",
+              "routes.updated": "#/$defs/RoutesUpdatedMessage",
+              "safe_zone.updated": "#/$defs/SafeZoneEvent",
+              "telemetry.benchmark": "#/$defs/BenchmarkMessage",
+              "telemetry.sample": "#/$defs/TelemetryMessage"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/DetectionsMessage"
+            },
+            {
+              "$ref": "#/$defs/HazardEvent"
+            },
+            {
+              "$ref": "#/$defs/EdgeEvent"
+            },
+            {
+              "$ref": "#/$defs/GraphUpdatedEvent"
+            },
+            {
+              "$ref": "#/$defs/ReportEvent"
+            },
+            {
+              "$ref": "#/$defs/SafeZoneEvent"
+            },
+            {
+              "$ref": "#/$defs/AgentEventMessage"
+            },
+            {
+              "$ref": "#/$defs/ClockEvent"
+            },
+            {
+              "$ref": "#/$defs/NetworkEvent"
+            },
+            {
+              "$ref": "#/$defs/RoutesUpdatedMessage"
+            },
+            {
+              "$ref": "#/$defs/TelemetryMessage"
+            },
+            {
+              "$ref": "#/$defs/BenchmarkMessage"
+            }
+          ],
+          "title": "Message"
+        },
+        "published_at": {
+          "format": "date-time",
+          "title": "Published At",
+          "type": "string"
+        },
+        "publisher": {
+          "description": "Service name",
+          "title": "Publisher",
+          "type": "string"
+        },
+        "topic": {
+          "description": "e.g. hazard, graph, routes, telemetry",
+          "title": "Topic",
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic",
+        "published_at",
+        "publisher",
+        "message"
+      ],
+      "title": "BusEnvelope",
+      "type": "object"
+    },
+    "CameraGeoref": {
+      "additionalProperties": false,
+      "description": "Street camera pose + ground-plane homography calibration.\n\n`image_points` (pixels) and `world_points` (lon/lat) are >= 4 correspondences on\nthe ground plane used to solve the 3x3 homography H so that\n`[lon, lat, 1]^T ~ H * [u, v, 1]^T`. The base station solves H once per camera.",
+      "properties": {
+        "camera_id": {
+          "title": "Camera Id",
+          "type": "string"
+        },
+        "fov_deg": {
+          "exclusiveMaximum": 180,
+          "exclusiveMinimum": 0,
+          "title": "Fov Deg",
+          "type": "number"
+        },
+        "heading_deg": {
+          "description": "Compass heading of optical axis",
+          "exclusiveMaximum": 360,
+          "minimum": 0,
+          "title": "Heading Deg",
+          "type": "number"
+        },
+        "image_height": {
+          "exclusiveMinimum": 0,
+          "title": "Image Height",
+          "type": "integer"
+        },
+        "image_points": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "minItems": 4,
+          "title": "Image Points",
+          "type": "array"
+        },
+        "image_width": {
+          "exclusiveMinimum": 0,
+          "title": "Image Width",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "camera",
+          "default": "camera",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lat": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Lat",
+          "type": "number"
+        },
+        "lon": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Lon",
+          "type": "number"
+        },
+        "world_points": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 2,
+            "type": "array"
+          },
+          "minItems": 4,
+          "title": "World Points",
+          "type": "array"
+        }
+      },
+      "required": [
+        "camera_id",
+        "lat",
+        "lon",
+        "heading_deg",
+        "fov_deg",
+        "image_width",
+        "image_height",
+        "image_points",
+        "world_points"
+      ],
+      "title": "CameraGeoref",
+      "type": "object"
+    },
+    "ClockEvent": {
+      "additionalProperties": false,
+      "description": "Scenario clock heartbeat from the simulator (1-2 Hz).",
+      "properties": {
+        "duration_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration S"
+        },
+        "playing": {
+          "title": "Playing",
+          "type": "boolean"
+        },
+        "scenario_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scenario Id"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "speed": {
+          "exclusiveMinimum": 0,
+          "title": "Speed",
+          "type": "number"
+        },
+        "type": {
+          "const": "clock.tick",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "scenario_id",
+        "playing",
+        "speed"
+      ],
+      "title": "ClockEvent",
+      "type": "object"
+    },
+    "CommunityEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "hazard_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HazardClass"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lat": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Lat",
+          "type": "number"
+        },
+        "lon": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Lon",
+          "type": "number"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "reporter": {
+          "description": "Simulated device label, e.g. phone-03",
+          "title": "Reporter",
+          "type": "string"
+        },
+        "t": {
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "target_hazard_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Hazard Id"
+        },
+        "type": {
+          "enum": [
+            "hazard_pin",
+            "confirm",
+            "deny",
+            "all_clear"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "t",
+        "type",
+        "lat",
+        "lon",
+        "reporter"
+      ],
+      "title": "CommunityEvent",
+      "type": "object"
+    },
+    "CommunityReport": {
+      "additionalProperties": false,
+      "description": "Anonymous, signed peer report (table `community_reports`).",
+      "properties": {
+        "confirms": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Confirms",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "denies": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Denies",
+          "type": "integer"
+        },
+        "device_pubkey": {
+          "description": "Base64 Ed25519 public key used to verify signature",
+          "title": "Device Pubkey",
+          "type": "string"
+        },
+        "geom": {
+          "$ref": "#/$defs/Point"
+        },
+        "hazard_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HazardClass"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for hazard_pin, optional for confirm/deny"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 280,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "report_type": {
+          "enum": [
+            "hazard_pin",
+            "confirm",
+            "deny",
+            "all_clear"
+          ],
+          "title": "Report Type",
+          "type": "string"
+        },
+        "reporter_hash": {
+          "description": "Hash of the device public key; never raw identity",
+          "minLength": 8,
+          "title": "Reporter Hash",
+          "type": "string"
+        },
+        "signature": {
+          "description": "Base64 Ed25519 signature over canonical report bytes",
+          "title": "Signature",
+          "type": "string"
+        },
+        "target_hazard_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hazard this confirms/denies, when known",
+          "title": "Target Hazard Id"
+        },
+        "trust_score": {
+          "default": 0.5,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Trust Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "geom",
+        "report_type",
+        "reporter_hash",
+        "device_pubkey",
+        "signature",
+        "created_at"
+      ],
+      "title": "CommunityReport",
+      "type": "object"
+    },
+    "DataSource": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {
+          "title": "License",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "note": {
+          "description": "How it was used and how it was approximated",
+          "title": "Note",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        }
+      },
+      "required": [
+        "name",
+        "license",
+        "note"
+      ],
+      "title": "DataSource",
+      "type": "object"
+    },
+    "Detection": {
+      "additionalProperties": false,
+      "description": "One detection/segment in image space plus its georeferenced footprint.",
+      "properties": {
+        "bbox_px": {
+          "description": "[x_min, y_min, x_max, y_max] in pixels",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bbox Px",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "footprint": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 3,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Georeferenced ring (lon/lat); None if georef failed",
+          "title": "Footprint"
+        },
+        "hazard_class": {
+          "$ref": "#/$defs/HazardClass"
+        },
+        "mask_polygon_px": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Simplified mask contour in pixels, [[u, v], ...]",
+          "title": "Mask Polygon Px"
+        }
+      },
+      "required": [
+        "hazard_class",
+        "confidence",
+        "bbox_px"
+      ],
+      "title": "Detection",
+      "type": "object"
+    },
+    "DetectionsMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "detections": {
+          "items": {
+            "$ref": "#/$defs/Detection"
+          },
+          "title": "Detections",
+          "type": "array"
+        },
+        "detector": {
+          "enum": [
+            "onnx_split",
+            "onnx_full",
+            "synthetic"
+          ],
+          "title": "Detector",
+          "type": "string"
+        },
+        "frame_id": {
+          "minimum": 0,
+          "title": "Frame Id",
+          "type": "integer"
+        },
+        "image_height": {
+          "exclusiveMinimum": 0,
+          "title": "Image Height",
+          "type": "integer"
+        },
+        "image_width": {
+          "exclusiveMinimum": 0,
+          "title": "Image Width",
+          "type": "integer"
+        },
+        "latency_ms": {
+          "description": "Measured capture->detections for this frame",
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "stream": {
+          "enum": [
+            "macro",
+            "micro"
+          ],
+          "title": "Stream",
+          "type": "string"
+        },
+        "type": {
+          "const": "detections",
+          "default": "detections",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "stream",
+        "source_id",
+        "frame_id",
+        "detector",
+        "image_width",
+        "image_height",
+        "detections",
+        "latency_ms"
+      ],
+      "title": "DetectionsMessage",
+      "type": "object"
+    },
+    "EdgeEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "edges": {
+          "description": "Edges whose status/cost changed",
+          "items": {
+            "$ref": "#/$defs/RoadEdge"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "graph_version": {
+          "minimum": 0,
+          "title": "Graph Version",
+          "type": "integer"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "const": "edge.updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "edges",
+        "graph_version"
+      ],
+      "title": "EdgeEvent",
+      "type": "object"
+    },
+    "EdgeHazardLink": {
+      "additionalProperties": false,
+      "description": "Which hazard caused which edge change (table `edge_hazard_links`).",
+      "properties": {
+        "applied_at": {
+          "format": "date-time",
+          "title": "Applied At",
+          "type": "string"
+        },
+        "edge_id": {
+          "title": "Edge Id",
+          "type": "integer"
+        },
+        "hazard_id": {
+          "format": "uuid",
+          "title": "Hazard Id",
+          "type": "string"
+        },
+        "overlap_fraction": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Overlap Fraction",
+          "type": "number"
+        },
+        "penalty_applied": {
+          "description": "Cost multiplier; inf for sever",
+          "minimum": 1.0,
+          "title": "Penalty Applied",
+          "type": "number"
+        }
+      },
+      "required": [
+        "edge_id",
+        "hazard_id",
+        "overlap_fraction",
+        "penalty_applied",
+        "applied_at"
+      ],
+      "title": "EdgeHazardLink",
+      "type": "object"
+    },
+    "FeaturePacketHeader": {
+      "additionalProperties": false,
+      "description": "Header for one intermediate-activation tensor streamed from edge to base.",
+      "properties": {
+        "captured_wall_t": {
+          "description": "Unix seconds at capture",
+          "title": "Captured Wall T",
+          "type": "number"
+        },
+        "compression": {
+          "enum": [
+            "none",
+            "zstd",
+            "lz4"
+          ],
+          "title": "Compression",
+          "type": "string"
+        },
+        "dtype": {
+          "enum": [
+            "int8",
+            "uint8",
+            "float16",
+            "float32"
+          ],
+          "title": "Dtype",
+          "type": "string"
+        },
+        "frame_id": {
+          "minimum": 0,
+          "title": "Frame Id",
+          "type": "integer"
+        },
+        "georef": {
+          "discriminator": {
+            "mapping": {
+              "camera": "#/$defs/CameraGeoref",
+              "tile": "#/$defs/TileGeoref"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CameraGeoref"
+            },
+            {
+              "$ref": "#/$defs/TileGeoref"
+            }
+          ],
+          "title": "Georef"
+        },
+        "head_ms": {
+          "description": "Measured edge head inference time",
+          "minimum": 0,
+          "title": "Head Ms",
+          "type": "number"
+        },
+        "model_id": {
+          "description": "e.g. yolov8n-seg@split6",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "payload_bytes": {
+          "description": "Compressed byte length that follows",
+          "minimum": 0,
+          "title": "Payload Bytes",
+          "type": "integer"
+        },
+        "scale": {
+          "description": "Dequant: x = scale * (q - zero_point)",
+          "exclusiveMinimum": 0,
+          "title": "Scale",
+          "type": "number"
+        },
+        "scenario_t": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Scenario clock, if replaying",
+          "title": "Scenario T"
+        },
+        "serialize_ms": {
+          "description": "Measured quantize+compress time",
+          "minimum": 0,
+          "title": "Serialize Ms",
+          "type": "number"
+        },
+        "shape": {
+          "description": "Tensor shape, NCHW",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Shape",
+          "type": "array"
+        },
+        "source_id": {
+          "description": "camera_id or tile_id",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "split_layer": {
+          "minimum": 0,
+          "title": "Split Layer",
+          "type": "integer"
+        },
+        "stream": {
+          "enum": [
+            "macro",
+            "micro"
+          ],
+          "title": "Stream",
+          "type": "string"
+        },
+        "zero_point": {
+          "title": "Zero Point",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "stream",
+        "frame_id",
+        "source_id",
+        "captured_wall_t",
+        "model_id",
+        "split_layer",
+        "shape",
+        "dtype",
+        "scale",
+        "zero_point",
+        "compression",
+        "payload_bytes",
+        "head_ms",
+        "serialize_ms",
+        "georef"
+      ],
+      "title": "FeaturePacketHeader",
+      "type": "object"
+    },
+    "FrameRef": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "t": {
+          "description": "Scenario seconds",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "tile_id": {
+          "title": "Tile Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "t",
+        "tile_id",
+        "path"
+      ],
+      "title": "FrameRef",
+      "type": "object"
+    },
+    "Geometry": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Point"
+        },
+        {
+          "$ref": "#/$defs/LineString"
+        },
+        {
+          "$ref": "#/$defs/Polygon"
+        },
+        {
+          "$ref": "#/$defs/MultiPolygon"
+        }
+      ],
+      "title": "Geometry"
+    },
+    "Georef": {
+      "discriminator": {
+        "mapping": {
+          "camera": "#/$defs/CameraGeoref",
+          "tile": "#/$defs/TileGeoref"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/CameraGeoref"
+        },
+        {
+          "$ref": "#/$defs/TileGeoref"
+        }
+      ],
+      "title": "Georef"
+    },
+    "GraphUpdatedEvent": {
+      "additionalProperties": false,
+      "description": "Cartographer finished a batch; Navigator should recompute.",
+      "properties": {
+        "changed_edge_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Changed Edge Ids",
+          "type": "array"
+        },
+        "graph_version": {
+          "minimum": 0,
+          "title": "Graph Version",
+          "type": "integer"
+        },
+        "penalized_count": {
+          "minimum": 0,
+          "title": "Penalized Count",
+          "type": "integer"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "severed_count": {
+          "minimum": 0,
+          "title": "Severed Count",
+          "type": "integer"
+        },
+        "type": {
+          "const": "graph.updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "graph_version",
+        "changed_edge_ids",
+        "severed_count",
+        "penalized_count"
+      ],
+      "title": "GraphUpdatedEvent",
+      "type": "object"
+    },
+    "HardwareInfo": {
+      "additionalProperties": false,
+      "description": "Read from the machine at runtime; never typed in by hand.",
+      "properties": {
+        "cpu": {
+          "title": "Cpu",
+          "type": "string"
+        },
+        "cpu_count": {
+          "minimum": 1,
+          "title": "Cpu Count",
+          "type": "integer"
+        },
+        "gpu": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gpu"
+        },
+        "hostname": {
+          "title": "Hostname",
+          "type": "string"
+        },
+        "memory_gb": {
+          "minimum": 0,
+          "title": "Memory Gb",
+          "type": "number"
+        },
+        "onnxruntime_providers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Onnxruntime Providers",
+          "type": "array"
+        },
+        "platform": {
+          "title": "Platform",
+          "type": "string"
+        },
+        "python": {
+          "title": "Python",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hostname",
+        "platform",
+        "cpu",
+        "cpu_count",
+        "memory_gb",
+        "python"
+      ],
+      "title": "HardwareInfo",
+      "type": "object"
+    },
+    "Hazard": {
+      "additionalProperties": false,
+      "description": "A georeferenced hazard polygon on the blackboard (table `hazards`).",
+      "properties": {
+        "camera_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Camera / tile id, if vision",
+          "title": "Camera Id"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "first_seen": {
+          "format": "date-time",
+          "title": "First Seen",
+          "type": "string"
+        },
+        "geom": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Polygon"
+            },
+            {
+              "$ref": "#/$defs/MultiPolygon"
+            }
+          ],
+          "title": "Geom"
+        },
+        "hazard_class": {
+          "$ref": "#/$defs/HazardClass",
+          "description": "DB column `class`; named hazard_class on the wire"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "last_seen": {
+          "format": "date-time",
+          "title": "Last Seen",
+          "type": "string"
+        },
+        "severity": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Severity",
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "macro_vision",
+            "micro_vision",
+            "community",
+            "simulated"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "resolved",
+            "disputed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "stream": {
+          "anyOf": [
+            {
+              "enum": [
+                "macro",
+                "micro"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Emitting stream, if vision",
+          "title": "Stream"
+        },
+        "ttl_s": {
+          "description": "Seconds after last_seen before auto-resolve",
+          "exclusiveMinimum": 0,
+          "title": "Ttl S",
+          "type": "number"
+        },
+        "velocity_m_s": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Estimated expansion speed for growing hazards; drives Cartographer buffer",
+          "title": "Velocity M S"
+        }
+      },
+      "required": [
+        "id",
+        "geom",
+        "hazard_class",
+        "confidence",
+        "source",
+        "first_seen",
+        "last_seen",
+        "ttl_s",
+        "severity"
+      ],
+      "title": "Hazard",
+      "type": "object"
+    },
+    "HazardClass": {
+      "description": "Every hazard class ARCO knows about, across both streams.",
+      "enum": [
+        "fire_front",
+        "smoke",
+        "flood_water",
+        "collapsed_building",
+        "tornado_swath",
+        "blocked_road",
+        "debris",
+        "flooded_road",
+        "fire",
+        "crowd_bottleneck",
+        "vehicle_blockage",
+        "downed_line"
+      ],
+      "title": "HazardClass",
+      "type": "string"
+    },
+    "HazardClassInfo": {
+      "description": "Display + behaviour metadata for one hazard class.",
+      "properties": {
+        "color": {
+          "description": "Hex color for overlays",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "title": "Color",
+          "type": "string"
+        },
+        "default_action": {
+          "enum": [
+            "sever",
+            "penalize",
+            "capacity"
+          ],
+          "title": "Default Action",
+          "type": "string"
+        },
+        "default_severity": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Default Severity",
+          "type": "number"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "expands": {
+          "default": false,
+          "description": "True if the hazard grows over time (fire/flood); Cartographer buffers it",
+          "title": "Expands",
+          "type": "boolean"
+        },
+        "id": {
+          "$ref": "#/$defs/HazardClass"
+        },
+        "label": {
+          "description": "Human-readable label for UI",
+          "title": "Label",
+          "type": "string"
+        },
+        "streams": {
+          "description": "Streams that can emit it",
+          "items": {
+            "enum": [
+              "macro",
+              "micro"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Streams",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "streams",
+        "color",
+        "description",
+        "default_action",
+        "default_severity"
+      ],
+      "title": "HazardClassInfo",
+      "type": "object"
+    },
+    "HazardEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "hazard": {
+          "$ref": "#/$defs/Hazard"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "hazard.created",
+            "hazard.updated",
+            "hazard.resolved",
+            "hazard.disputed"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "hazard"
+      ],
+      "title": "HazardEvent",
+      "type": "object"
+    },
+    "HazardGeometry": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Polygon"
+        },
+        {
+          "$ref": "#/$defs/MultiPolygon"
+        }
+      ],
+      "title": "HazardGeometry"
+    },
+    "LineString": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 2,
+            "type": "array"
+          },
+          "minItems": 2,
+          "title": "Coordinates",
+          "type": "array"
+        },
+        "type": {
+          "const": "LineString",
+          "default": "LineString",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "title": "LineString",
+      "type": "object"
+    },
+    "MacroFeed": {
+      "additionalProperties": false,
+      "properties": {
+        "frames": {
+          "items": {
+            "$ref": "#/$defs/FrameRef"
+          },
+          "title": "Frames",
+          "type": "array"
+        },
+        "tiles": {
+          "items": {
+            "$ref": "#/$defs/TileRef"
+          },
+          "title": "Tiles",
+          "type": "array"
+        }
+      },
+      "title": "MacroFeed",
+      "type": "object"
+    },
+    "MicroFeed": {
+      "additionalProperties": false,
+      "properties": {
+        "calibration": {
+          "$ref": "#/$defs/CameraGeoref"
+        },
+        "camera_id": {
+          "title": "Camera Id",
+          "type": "string"
+        },
+        "fov_deg": {
+          "exclusiveMaximum": 180,
+          "exclusiveMinimum": 0,
+          "title": "Fov Deg",
+          "type": "number"
+        },
+        "heading_deg": {
+          "exclusiveMaximum": 360,
+          "minimum": 0,
+          "title": "Heading Deg",
+          "type": "number"
+        },
+        "lat": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Lat",
+          "type": "number"
+        },
+        "lon": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Lon",
+          "type": "number"
+        },
+        "synthetic_overlays": {
+          "items": {
+            "$ref": "#/$defs/SyntheticOverlay"
+          },
+          "title": "Synthetic Overlays",
+          "type": "array"
+        },
+        "video_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relative to data/; None = synthetic generator",
+          "title": "Video Path"
+        }
+      },
+      "required": [
+        "camera_id",
+        "lat",
+        "lon",
+        "heading_deg",
+        "fov_deg",
+        "calibration"
+      ],
+      "title": "MicroFeed",
+      "type": "object"
+    },
+    "MultiPolygon": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "items": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 3,
+                "minItems": 2,
+                "type": "array"
+              },
+              "minItems": 4,
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "minItems": 1,
+          "title": "Coordinates",
+          "type": "array"
+        },
+        "type": {
+          "const": "MultiPolygon",
+          "default": "MultiPolygon",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "title": "MultiPolygon",
+      "type": "object"
+    },
+    "NetworkEvent": {
+      "additionalProperties": false,
+      "description": "Simulated cellular network state (chaos button / scenario).",
+      "properties": {
+        "cellular_up": {
+          "title": "Cellular Up",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "const": "network.cellular",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "cellular_up"
+      ],
+      "title": "NetworkEvent",
+      "type": "object"
+    },
+    "Point": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 2,
+          "title": "Coordinates",
+          "type": "array"
+        },
+        "type": {
+          "const": "Point",
+          "default": "Point",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "title": "Point",
+      "type": "object"
+    },
+    "Polygon": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinates": {
+          "items": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 2,
+              "type": "array"
+            },
+            "minItems": 4,
+            "type": "array"
+          },
+          "minItems": 1,
+          "title": "Coordinates",
+          "type": "array"
+        },
+        "type": {
+          "const": "Polygon",
+          "default": "Polygon",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "title": "Polygon",
+      "type": "object"
+    },
+    "PopulationCell": {
+      "additionalProperties": false,
+      "description": "Origin cell: where evacuees start.",
+      "properties": {
+        "geom": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Point"
+            },
+            {
+              "$ref": "#/$defs/Polygon"
+            }
+          ],
+          "title": "Geom"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "population": {
+          "minimum": 0,
+          "title": "Population",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "geom",
+        "population"
+      ],
+      "title": "PopulationCell",
+      "type": "object"
+    },
+    "ReportEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "report": {
+          "$ref": "#/$defs/CommunityReport"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "const": "report.created",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "report"
+      ],
+      "title": "ReportEvent",
+      "type": "object"
+    },
+    "RoadEdge": {
+      "additionalProperties": false,
+      "description": "Directed road segment mirrored from OSM (table `road_edges`).",
+      "properties": {
+        "base_cost": {
+          "description": "Travel cost with no hazards (seconds)",
+          "minimum": 0.0,
+          "title": "Base Cost",
+          "type": "number"
+        },
+        "capacity_estimate": {
+          "description": "People per minute the edge can carry before congestion",
+          "minimum": 0.0,
+          "title": "Capacity Estimate",
+          "type": "number"
+        },
+        "current_cost": {
+          "description": "base_cost x penalties; inf when severed",
+          "minimum": 0.0,
+          "title": "Current Cost",
+          "type": "number"
+        },
+        "current_load": {
+          "default": 0.0,
+          "description": "Assigned people per minute",
+          "minimum": 0.0,
+          "title": "Current Load",
+          "type": "number"
+        },
+        "geom": {
+          "$ref": "#/$defs/LineString"
+        },
+        "highway": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "OSM highway tag",
+          "title": "Highway"
+        },
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "length_m": {
+          "minimum": 0.0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "osm_way_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Osm Way Id"
+        },
+        "status": {
+          "default": "open",
+          "enum": [
+            "open",
+            "penalized",
+            "severed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "u": {
+          "description": "Source OSM node id",
+          "title": "U",
+          "type": "integer"
+        },
+        "v": {
+          "description": "Target OSM node id",
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "geom",
+        "u",
+        "v",
+        "length_m",
+        "base_cost",
+        "current_cost",
+        "capacity_estimate"
+      ],
+      "title": "RoadEdge",
+      "type": "object"
+    },
+    "Route": {
+      "additionalProperties": false,
+      "description": "One computed evacuation route for a crowd group (table `routes`).",
+      "properties": {
+        "computed_at": {
+          "format": "date-time",
+          "title": "Computed At",
+          "type": "string"
+        },
+        "cost": {
+          "minimum": 0.0,
+          "title": "Cost",
+          "type": "number"
+        },
+        "crowd_group_id": {
+          "title": "Crowd Group Id",
+          "type": "string"
+        },
+        "edge_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Edge Ids",
+          "type": "array"
+        },
+        "explanation_source": {
+          "default": "deterministic",
+          "enum": [
+            "slm",
+            "deterministic"
+          ],
+          "title": "Explanation Source",
+          "type": "string"
+        },
+        "graph_version": {
+          "description": "road_edges version the route was built on",
+          "minimum": 0,
+          "title": "Graph Version",
+          "type": "integer"
+        },
+        "group_size": {
+          "minimum": 0,
+          "title": "Group Size",
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "instruction": {
+          "description": "One-line human instruction (SLM or deterministic)",
+          "title": "Instruction",
+          "type": "string"
+        },
+        "length_m": {
+          "minimum": 0.0,
+          "title": "Length M",
+          "type": "number"
+        },
+        "origin_cell_id": {
+          "title": "Origin Cell Id",
+          "type": "string"
+        },
+        "path": {
+          "$ref": "#/$defs/LineString"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Why this route; may be SLM text",
+          "title": "Rationale"
+        },
+        "safe_zone_id": {
+          "title": "Safe Zone Id",
+          "type": "string"
+        },
+        "version": {
+          "description": "Monotonic per crowd_group_id",
+          "minimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "origin_cell_id",
+        "safe_zone_id",
+        "crowd_group_id",
+        "group_size",
+        "path",
+        "edge_ids",
+        "cost",
+        "length_m",
+        "computed_at",
+        "graph_version",
+        "version",
+        "instruction"
+      ],
+      "title": "Route",
+      "type": "object"
+    },
+    "RoutesUpdatedMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "compute_ms": {
+          "description": "Measured Navigator compute time",
+          "minimum": 0,
+          "title": "Compute Ms",
+          "type": "number"
+        },
+        "graph_version": {
+          "minimum": 0,
+          "title": "Graph Version",
+          "type": "integer"
+        },
+        "max_edge_load_ratio": {
+          "description": "max(current_load / capacity) across used edges after dispersal",
+          "minimum": 0,
+          "title": "Max Edge Load Ratio",
+          "type": "number"
+        },
+        "routes": {
+          "items": {
+            "$ref": "#/$defs/Route"
+          },
+          "title": "Routes",
+          "type": "array"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "trigger": {
+          "enum": [
+            "graph.updated",
+            "hazard",
+            "periodic",
+            "manual"
+          ],
+          "title": "Trigger",
+          "type": "string"
+        },
+        "type": {
+          "const": "routes.updated",
+          "default": "routes.updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "graph_version",
+        "routes",
+        "trigger",
+        "compute_ms",
+        "max_edge_load_ratio"
+      ],
+      "title": "RoutesUpdatedMessage",
+      "type": "object"
+    },
+    "SafeZone": {
+      "additionalProperties": false,
+      "description": "Evacuation destination (table `safe_zones`).",
+      "properties": {
+        "capacity": {
+          "minimum": 0,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "current_load": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Current Load",
+          "type": "integer"
+        },
+        "geom": {
+          "$ref": "#/$defs/Polygon"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "geom",
+        "capacity"
+      ],
+      "title": "SafeZone",
+      "type": "object"
+    },
+    "SafeZoneEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "safe_zone": {
+          "$ref": "#/$defs/SafeZone"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "const": "safe_zone.updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "type",
+        "safe_zone"
+      ],
+      "title": "SafeZoneEvent",
+      "type": "object"
+    },
+    "SafeZoneSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "capacity": {
+          "minimum": 0,
+          "title": "Capacity",
+          "type": "integer"
+        },
+        "geom": {
+          "$ref": "#/$defs/Polygon"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "geom",
+        "capacity"
+      ],
+      "title": "SafeZoneSpec",
+      "type": "object"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "properties": {
+        "bbox": {
+          "description": "[min_lon, min_lat, max_lon, max_lat]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bbox",
+          "type": "array"
+        },
+        "community_events": {
+          "items": {
+            "$ref": "#/$defs/CommunityEvent"
+          },
+          "title": "Community Events",
+          "type": "array"
+        },
+        "data_sources": {
+          "items": {
+            "$ref": "#/$defs/DataSource"
+          },
+          "minItems": 1,
+          "title": "Data Sources",
+          "type": "array"
+        },
+        "duration_s": {
+          "exclusiveMinimum": 0,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "event": {
+          "enum": [
+            "wildfire",
+            "tornado",
+            "flood",
+            "hurricane",
+            "earthquake",
+            "other"
+          ],
+          "title": "Event",
+          "type": "string"
+        },
+        "event_date": {
+          "description": "ISO date of the real event, e.g. 2023-08-08",
+          "title": "Event Date",
+          "type": "string"
+        },
+        "expected_blocked_edges": {
+          "description": "road_edges ids expected severed by the end",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Expected Blocked Edges",
+          "type": "array"
+        },
+        "id": {
+          "pattern": "^[a-z0-9_\\-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "const": "Simulated on real event geometry",
+          "default": "Simulated on real event geometry",
+          "title": "Label",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        },
+        "macro_feed": {
+          "$ref": "#/$defs/MacroFeed"
+        },
+        "micro_feeds": {
+          "items": {
+            "$ref": "#/$defs/MicroFeed"
+          },
+          "title": "Micro Feeds",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "notes": {
+          "description": "Must state data source and that polygons are approximations",
+          "minLength": 20,
+          "title": "Notes",
+          "type": "string"
+        },
+        "population_cells": {
+          "items": {
+            "$ref": "#/$defs/PopulationCell"
+          },
+          "minItems": 1,
+          "title": "Population Cells",
+          "type": "array"
+        },
+        "road_graph_ref": {
+          "description": "bbox string, place name, or graphml path",
+          "title": "Road Graph Ref",
+          "type": "string"
+        },
+        "road_graph_source": {
+          "enum": [
+            "osmnx_bbox",
+            "osmnx_place",
+            "graphml_file"
+          ],
+          "title": "Road Graph Source",
+          "type": "string"
+        },
+        "safe_zones": {
+          "items": {
+            "$ref": "#/$defs/SafeZoneSpec"
+          },
+          "minItems": 1,
+          "title": "Safe Zones",
+          "type": "array"
+        },
+        "schema_version": {
+          "description": "arco_schemas.SCHEMA_VERSION it was written for",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "start_time": {
+          "description": "Wall-clock the scenario claims to start at",
+          "format": "date-time",
+          "title": "Start Time",
+          "type": "string"
+        },
+        "timeline": {
+          "items": {
+            "$ref": "#/$defs/TimelineEvent"
+          },
+          "title": "Timeline",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "name",
+        "event",
+        "event_date",
+        "location",
+        "bbox",
+        "start_time",
+        "duration_s",
+        "road_graph_source",
+        "road_graph_ref",
+        "population_cells",
+        "safe_zones",
+        "macro_feed",
+        "timeline",
+        "data_sources",
+        "notes"
+      ],
+      "title": "Scenario",
+      "type": "object"
+    },
+    "SyntheticOverlay": {
+      "additionalProperties": false,
+      "description": "Composite a hazard overlay onto the base clip at a scripted time.",
+      "properties": {
+        "bbox_px": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bbox Px",
+          "type": "array"
+        },
+        "duration_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration S"
+        },
+        "hazard_class": {
+          "$ref": "#/$defs/HazardClass"
+        },
+        "t": {
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        }
+      },
+      "required": [
+        "t",
+        "hazard_class",
+        "bbox_px"
+      ],
+      "title": "SyntheticOverlay",
+      "type": "object"
+    },
+    "TelemetryChannelMessage": {
+      "discriminator": {
+        "mapping": {
+          "telemetry.benchmark": "#/$defs/BenchmarkMessage",
+          "telemetry.sample": "#/$defs/TelemetryMessage"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/TelemetryMessage"
+        },
+        {
+          "$ref": "#/$defs/BenchmarkMessage"
+        }
+      ],
+      "title": "TelemetryChannelMessage"
+    },
+    "TelemetryMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "sample": {
+          "$ref": "#/$defs/TelemetrySample"
+        },
+        "scenario_t": {
+          "description": "Scenario clock seconds; -1 when no scenario",
+          "title": "Scenario T",
+          "type": "number"
+        },
+        "seq": {
+          "description": "Per-channel monotonic sequence for gap detection",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "type": {
+          "const": "telemetry.sample",
+          "default": "telemetry.sample",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_t",
+        "wall_t",
+        "seq",
+        "sample"
+      ],
+      "title": "TelemetryMessage",
+      "type": "object"
+    },
+    "TelemetrySample": {
+      "additionalProperties": false,
+      "description": "Per-frame timing for one pipeline on one stream.",
+      "properties": {
+        "bytes_sent": {
+          "description": "Bytes over the edge link for this frame",
+          "minimum": 0,
+          "title": "Bytes Sent",
+          "type": "integer"
+        },
+        "cpu_percent": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cpu Percent"
+        },
+        "dropped_frames": {
+          "description": "Cumulative drops in this run",
+          "minimum": 0,
+          "title": "Dropped Frames",
+          "type": "integer"
+        },
+        "fps": {
+          "description": "Rolling throughput",
+          "minimum": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "frame_id": {
+          "minimum": 0,
+          "title": "Frame Id",
+          "type": "integer"
+        },
+        "gpu_percent": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gpu Percent"
+        },
+        "mode": {
+          "enum": [
+            "live",
+            "recorded"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "pipeline": {
+          "enum": [
+            "fp32_full",
+            "int8_split"
+          ],
+          "title": "Pipeline",
+          "type": "string"
+        },
+        "rss_mb": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rss Mb"
+        },
+        "scenario_t": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scenario T"
+        },
+        "stage_ms": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Measured per-stage latency",
+          "propertyNames": {
+            "enum": [
+              "capture",
+              "head",
+              "serialize",
+              "network",
+              "deserialize",
+              "tail",
+              "postprocess",
+              "georef",
+              "db_write"
+            ]
+          },
+          "title": "Stage Ms",
+          "type": "object"
+        },
+        "stream": {
+          "enum": [
+            "macro",
+            "micro"
+          ],
+          "title": "Stream",
+          "type": "string"
+        },
+        "total_ms": {
+          "minimum": 0,
+          "title": "Total Ms",
+          "type": "number"
+        },
+        "wall_t": {
+          "format": "date-time",
+          "title": "Wall T",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "pipeline",
+        "stream",
+        "frame_id",
+        "wall_t",
+        "stage_ms",
+        "total_ms",
+        "fps",
+        "bytes_sent",
+        "dropped_frames"
+      ],
+      "title": "TelemetrySample",
+      "type": "object"
+    },
+    "TileGeoref": {
+      "additionalProperties": false,
+      "description": "Satellite/aerial tile placement: affine pixel -> lon/lat.\n\n`affine` is the 6-element GDAL-style transform `[a, b, c, d, e, f]` such that\n`lon = a*col + b*row + c` and `lat = d*col + e*row + f`.",
+      "properties": {
+        "affine": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 6,
+          "minItems": 6,
+          "title": "Affine",
+          "type": "array"
+        },
+        "bounds": {
+          "description": "[min_lon, min_lat, max_lon, max_lat]",
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Bounds",
+          "type": "array"
+        },
+        "image_height": {
+          "exclusiveMinimum": 0,
+          "title": "Image Height",
+          "type": "integer"
+        },
+        "image_width": {
+          "exclusiveMinimum": 0,
+          "title": "Image Width",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "tile",
+          "default": "tile",
+          "title": "Kind",
+          "type": "string"
+        },
+        "tile_id": {
+          "title": "Tile Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tile_id",
+        "bounds",
+        "affine",
+        "image_width",
+        "image_height"
+      ],
+      "title": "TileGeoref",
+      "type": "object"
+    },
+    "TileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "georef": {
+          "$ref": "#/$defs/TileGeoref"
+        },
+        "path": {
+          "description": "Relative to data/, e.g. samples/lahaina/tile_0.png",
+          "title": "Path",
+          "type": "string"
+        },
+        "tile_id": {
+          "title": "Tile Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tile_id",
+        "path",
+        "georef"
+      ],
+      "title": "TileRef",
+      "type": "object"
+    },
+    "TimelineEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "camera_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Camera Id"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "hazard_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HazardClass"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "hazard_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stable id for appear/update/resolve of the same hazard",
+          "title": "Hazard Id"
+        },
+        "hazard_polygon_geojson": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Polygon"
+            },
+            {
+              "$ref": "#/$defs/MultiPolygon"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hazard Polygon Geojson"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "stream": {
+          "anyOf": [
+            {
+              "enum": [
+                "macro",
+                "micro"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stream"
+        },
+        "t": {
+          "description": "Scenario seconds from start",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "type": {
+          "enum": [
+            "hazard_appear",
+            "hazard_update",
+            "hazard_resolve",
+            "cell_network_down",
+            "cell_network_up",
+            "camera_obscured",
+            "note"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "velocity_m_s": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Velocity M S"
+        }
+      },
+      "required": [
+        "t",
+        "type"
+      ],
+      "title": "TimelineEvent",
+      "type": "object"
+    }
+  },
+  "$id": "https://arco.local/schema/arco.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "ARCO shared contracts. Generated by arco_schemas.export; do not edit.",
+  "title": "ArcoSchemaBundle",
+  "type": "object",
+  "version": "0.1.0"
+}

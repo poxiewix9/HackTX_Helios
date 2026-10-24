@@ -1,0 +1,30 @@
+{
+  "name": "@arco/schemas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ARCO shared contracts: TypeScript types generated from the Pydantic JSON Schema bundle",
+  "type": "module",
+  "main": "./ts/src/index.ts",
+  "types": "./ts/src/index.ts",
+  "exports": {
+    ".": "./ts/src/index.ts",
+    "./schema/*": "./schema/*"
+  },
+  "files": [
+    "ts/src",
+    "schema"
+  ],
+  "scripts": {
+    "generate": "node codegen/generate-ts.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "json-schema-to-typescript": "^15.0.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.3"
+  }
+}

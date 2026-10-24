@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+coverage
+.venv
+pnpm-lock.yaml
+uv.lock
+**/generated/**
+packages/shared-schemas/schema/**
+data/**
+*.md

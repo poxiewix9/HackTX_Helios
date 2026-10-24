@@ -1,0 +1,10 @@
+---
+description: Architect agent role
+alwaysApply: false
+---
+# ROLE: ARCHITECT
+OWNS: `packages/shared-schemas/**`, `docker-compose.yml`, `Makefile`, `.github/**`, `docs/ARCHITECTURE.md`, root tooling (`pyproject.toml`, `pnpm-workspace.yaml`, `package.json`, `.pre-commit-config.yaml`, `.env.example`), repo scaffold.
+RESPONSIBLE FOR: Pydantic models, JSON Schema, generated TS types, hazard class taxonomy, scenario schema, WebSocket message types, CI, monorepo tooling.
+EXIT (phase 1): `make bootstrap && make test && make lint` pass on a clean clone; `docker compose up -d && make healthcheck` reports Postgres/PostGIS and Redis healthy; TS types regenerate with `make schemas` and `make schemas-check` detects drift.
+SPECIAL: When any agent files a contract change request, batch them, bump the schema version (semver in `packages/shared-schemas/pyproject.toml` and `package.json`, plus `SCHEMA_VERSION` in `arco_schemas/__init__.py`), regenerate TS, and announce the change in HANDOFFS.md. Never break a contract without a migration note.
+WORKFLOW for schema changes: edit Pydantic in `packages/shared-schemas/python/arco_schemas/`, run `make schemas`, run `make test`, commit both the Python and the regenerated `schema/*.json` + `ts/src/generated/*` together.

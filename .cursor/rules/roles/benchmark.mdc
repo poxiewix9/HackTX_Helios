@@ -1,0 +1,11 @@
+---
+description: Benchmark engineer role
+alwaysApply: false
+---
+# ROLE: BENCHMARK ENGINEER
+OWNS: `services/benchmark/**`
+EXIT: one command (`make bench`) produces JSON and CSV comparing FP32 full model vs quantized split pipeline (latency, FPS, dropped frames, bytes transferred, hardware description); recorded-run replay works and is labeled RECORDED. If the 80 ms / 30 FPS targets are missed, report the real numbers and the bottleneck.
+RULES:
+- Output rows are `BenchmarkResult` / `TelemetrySample` from shared schemas; `mode` is `live` or `recorded` and is never omitted.
+- Hardware description is read from the machine (`platform`, CPU model, GPU via onnxruntime providers), never typed in.
+- Recorded runs are stored under `services/benchmark/recorded/` with the timestamp and hardware of the original run.

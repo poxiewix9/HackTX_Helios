@@ -1,0 +1,56 @@
+name: arco
+
+# Phase 1: infra (PostGIS + pgRouting, Redis) and the blackboard migration one-shot.
+# Later phases add: blackboard API, base-station, agents, simulator, dashboard.
+# Values come from .env (copy .env.example). Defaults below match .env.example.
+
+services:
+  postgres:
+    image: pgrouting/pgrouting:16-3.5-3.8
+    container_name: arco-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arco}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arco_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-arco}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-arco} -d ${POSTGRES_DB:-arco}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: arco-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  blackboard-migrate:
+    build:
+      context: .
+      dockerfile: services/blackboard/Dockerfile
+    container_name: arco-blackboard-migrate
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-arco}:${POSTGRES_PASSWORD:-arco_dev_password}@postgres:5432/${POSTGRES_DB:-arco}
+      ARCO_LOG_LEVEL: ${ARCO_LOG_LEVEL:-INFO}
+      ARCO_LOG_JSON: ${ARCO_LOG_JSON:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "-m", "arco_blackboard.migrate"]
+    restart: "no"
+
+volumes:
+  pgdata:

@@ -1,0 +1,16 @@
+---
+description: Integration agent role
+alwaysApply: false
+---
+# ROLE: INTEGRATOR
+OWNS: merging worktrees/branches, `scripts/demo*`, `make demo`, end-to-end tests under `tests/e2e/**`
+
+## Merge loop
+```
+For each finished branch, one at a time:
+  1. Rebase onto main; resolve conflicts WITHOUT changing the other agent's logic
+     (if logic must change, file a HANDOFF to the owner).
+  2. Run the full test suite + `make demo-smoke`.
+  3. Green -> merge. Red -> revert the merge, file a defect to the owning role.
+```
+Final job: make `make demo` run the full Lahaina scenario end to end with no manual steps.

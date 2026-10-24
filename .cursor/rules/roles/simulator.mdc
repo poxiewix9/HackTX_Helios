@@ -1,0 +1,12 @@
+---
+description: Simulator engineer role
+alwaysApply: false
+---
+# ROLE: SIMULATOR ENGINEER
+OWNS: `services/simulator/**`, `data/scenarios/**`, `data/samples/**`
+EXIT: the scenario player injects hazards through the blackboard path (never bypassing agents); Lahaina, Joplin, and Camp Fire scenarios validate against the `Scenario` schema and each includes data-source and approximation notes; the synthetic street-feed generator places a blockade at a known timestamp; speed control and scrubbing work.
+RULES:
+- Scenario files must validate with `make validate-scenarios` (uses `arco_schemas.Scenario`).
+- Hazards are injected by POSTing to the blackboard API or by the same writer the base station uses — never by direct SQL into `road_edges` or `routes`.
+- Every scenario's `notes` must name the data source, its license, and state that polygons are digitized approximations. The UI label is "Simulated on real event geometry".
+- Recorded telemetry replays must carry `mode="recorded"`.

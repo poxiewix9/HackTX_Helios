@@ -1,0 +1,49 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-json
+        exclude: ^(tsconfig.*\.json|\.vscode/.*)$
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # Ruff runs from the uv environment so the hook version always matches `make lint`.
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi]
+      - id: mypy
+        name: mypy (uv)
+        entry: uv run mypy packages/shared-schemas/python services/blackboard/arco_blackboard
+        language: system
+        pass_filenames: false
+        files: \.py$
+      - id: prettier
+        name: prettier
+        entry: pnpm exec prettier --check
+        language: system
+        files: \.(ts|tsx|js|mjs|json|yaml|yml|css)$
+        exclude: ^(pnpm-lock\.yaml|.*/generated/.*|packages/shared-schemas/schema/.*)$
+      - id: eslint
+        name: eslint
+        entry: pnpm exec eslint
+        language: system
+        files: \.(ts|tsx|mjs)$
+        exclude: .*/generated/.*
+      - id: schemas-check
+        name: shared-schemas drift check
+        entry: make schemas-check
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

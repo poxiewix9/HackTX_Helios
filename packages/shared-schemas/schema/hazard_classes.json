@@ -1,0 +1,167 @@
+{
+  "classes": [
+    {
+      "color": "#ff3b30",
+      "default_action": "sever",
+      "default_severity": 1.0,
+      "description": "Active flame front visible from above",
+      "expands": true,
+      "id": "fire_front",
+      "label": "Fire front",
+      "streams": [
+        "macro"
+      ]
+    },
+    {
+      "color": "#8e8e93",
+      "default_action": "penalize",
+      "default_severity": 0.5,
+      "description": "Smoke plume; reduces visibility, may hide other hazards",
+      "expands": true,
+      "id": "smoke",
+      "label": "Smoke",
+      "streams": [
+        "macro",
+        "micro"
+      ]
+    },
+    {
+      "color": "#0a84ff",
+      "default_action": "sever",
+      "default_severity": 0.9,
+      "description": "Standing or moving flood water over terrain",
+      "expands": true,
+      "id": "flood_water",
+      "label": "Flood water",
+      "streams": [
+        "macro"
+      ]
+    },
+    {
+      "color": "#a2845e",
+      "default_action": "penalize",
+      "default_severity": 0.7,
+      "description": "Structural collapse footprint",
+      "expands": false,
+      "id": "collapsed_building",
+      "label": "Collapsed building",
+      "streams": [
+        "macro"
+      ]
+    },
+    {
+      "color": "#bf5af2",
+      "default_action": "sever",
+      "default_severity": 0.95,
+      "description": "Long narrow damage corridor from a tornado track",
+      "expands": false,
+      "id": "tornado_swath",
+      "label": "Tornado swath",
+      "streams": [
+        "macro"
+      ]
+    },
+    {
+      "color": "#ff9f0a",
+      "default_action": "sever",
+      "default_severity": 0.8,
+      "description": "Road obstruction visible from above",
+      "expands": false,
+      "id": "blocked_road",
+      "label": "Blocked road",
+      "streams": [
+        "macro"
+      ]
+    },
+    {
+      "color": "#ffd60a",
+      "default_action": "penalize",
+      "default_severity": 0.6,
+      "description": "Debris field on the roadway",
+      "expands": false,
+      "id": "debris",
+      "label": "Debris",
+      "streams": [
+        "micro"
+      ]
+    },
+    {
+      "color": "#64d2ff",
+      "default_action": "sever",
+      "default_severity": 0.85,
+      "description": "Water across the road surface at street level",
+      "expands": true,
+      "id": "flooded_road",
+      "label": "Flooded road",
+      "streams": [
+        "micro"
+      ]
+    },
+    {
+      "color": "#ff453a",
+      "default_action": "sever",
+      "default_severity": 1.0,
+      "description": "Flames visible from a street camera",
+      "expands": true,
+      "id": "fire",
+      "label": "Fire",
+      "streams": [
+        "micro"
+      ]
+    },
+    {
+      "color": "#30d158",
+      "default_action": "capacity",
+      "default_severity": 0.5,
+      "description": "Pedestrian or vehicle crowding approaching stampede density",
+      "expands": false,
+      "id": "crowd_bottleneck",
+      "label": "Crowd bottleneck",
+      "streams": [
+        "micro"
+      ]
+    },
+    {
+      "color": "#ff9f0a",
+      "default_action": "penalize",
+      "default_severity": 0.6,
+      "description": "Stalled or crashed vehicles blocking lanes",
+      "expands": false,
+      "id": "vehicle_blockage",
+      "label": "Vehicle blockage",
+      "streams": [
+        "micro"
+      ]
+    },
+    {
+      "color": "#ffd60a",
+      "default_action": "sever",
+      "default_severity": 0.9,
+      "description": "Downed electrical line on or over the road",
+      "expands": false,
+      "id": "downed_line",
+      "label": "Downed power line",
+      "streams": [
+        "micro"
+      ]
+    }
+  ],
+  "macro": [
+    "fire_front",
+    "smoke",
+    "flood_water",
+    "collapsed_building",
+    "tornado_swath",
+    "blocked_road"
+  ],
+  "micro": [
+    "smoke",
+    "debris",
+    "flooded_road",
+    "fire",
+    "crowd_bottleneck",
+    "vehicle_blockage",
+    "downed_line"
+  ],
+  "version": "0.1.0"
+}

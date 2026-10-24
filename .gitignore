@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv-cache/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+dist/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Agent loop state (per-checkout, never shared)
+.cursor/.loop_state/
+.cursor/autoloop.enabled
+
+# Data that is downloaded or generated
+data/cache/
+data/osm/*.graphml
+models/
+*.onnx
+*.pt
+*.engine
+services/benchmark/results/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
