@@ -94,6 +94,52 @@ test("plays the default scenario and the snap animation fires after a hazard eve
   await expect(page.getByTestId("play-button")).toBeVisible();
 });
 
+test("mesh panel: a pin dropped on an isolated phone reaches the gateway over the mesh and uploads when cellular returns", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByTestId("mode-badge")).toHaveText("LIVE STACK", { timeout: 30_000 });
+  const stats = page.getByTestId("mesh-stats");
+  await expect(stats).toBeVisible({ timeout: 30_000 });
+  const gateway = page.getByTestId("mesh-device-gateway");
+  const phone5 = page.getByTestId("mesh-device-phone-5");
+  await expect(gateway).toBeVisible({ timeout: 30_000 });
+
+  // Cellular off for every simulated phone: the gateway cannot upload, only mesh moves data.
+  const cell = page.getByTestId("mesh-cellular");
+  if ((await cell.getAttribute("data-state")) === "on") await cell.click();
+  await expect(cell).toHaveAttribute("data-state", "off");
+  await expect(phone5).toHaveAttribute("data-conn", /mesh|isolated/);
+
+  const gwBefore = Number((await gateway.getAttribute("data-pins")) ?? "0");
+  const upBefore = Number((await stats.getAttribute("data-uploaded")) ?? "0");
+
+  // phone-5 is the default selection (end of the bridged chain, 3 hops from the gateway).
+  await page.getByTestId("mesh-drop-pin").click();
+  await page.getByTestId("mesh-pin-blocked_road").click();
+  await expect(phone5).toHaveAttribute("data-pins", String(gwBefore + 1), { timeout: 10_000 });
+  // Multi-hop CRDT propagation with cellular down.
+  await expect(gateway).toHaveAttribute("data-pins", String(gwBefore + 1), { timeout: 15_000 });
+  // ...but nothing was uploaded while cellular was off.
+  expect(Number((await stats.getAttribute("data-uploaded")) ?? "0")).toBe(upBefore);
+
+  // Cellular back: the gateway uploads the pending pin exactly once and the consensus
+  // agent reports it in the agent feed.
+  await cell.click();
+  await expect(cell).toHaveAttribute("data-state", "on");
+  await expect
+    .poll(async () => Number((await stats.getAttribute("data-uploaded")) ?? "0"), {
+      timeout: 15_000,
+    })
+    .toBe(upBefore + 1);
+  await expect(
+    page
+      .locator("[data-testid=agent-event]")
+      .filter({ hasText: /report\./ })
+      .first(),
+  ).toBeVisible({ timeout: 30_000 });
+});
+
 test("chaos button: cellular kill is reflected from the network event", async ({
   page,
   request,

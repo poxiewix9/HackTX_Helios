@@ -45,3 +45,6 @@ services/benchmark/results/
 .idea/
 .vscode/
 *.swp
+# Expo
+apps/mobile/.expo/
+apps/mobile/.expo-export/

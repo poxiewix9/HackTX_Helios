@@ -17,6 +17,8 @@ export interface DashboardConfig {
   satelliteAttribution: string;
   /** Default scenario id used for the recorded fallback file. */
   defaultScenario: string;
+  /** Dev mesh relay (apps/mobile `pnpm relay`); empty disables bridging real phones into the panel. */
+  meshRelayWs: string;
   /** Seconds after which an unconnected live stack triggers the recorded replay fallback. */
   offlineFallbackAfterMs: number;
 }
@@ -49,5 +51,6 @@ export const config: DashboardConfig = {
   satelliteAttribution:
     "Imagery © Esri, Maxar, Earthstar Geographics | © OpenStreetMap contributors",
   defaultScenario: pick(process.env.NEXT_PUBLIC_DEFAULT_SCENARIO, "lahaina_2023"),
+  meshRelayWs: pick(process.env.NEXT_PUBLIC_MESH_RELAY_WS, "ws://localhost:8787"),
   offlineFallbackAfterMs: Number(pick(process.env.NEXT_PUBLIC_OFFLINE_FALLBACK_MS, "6000")),
 };

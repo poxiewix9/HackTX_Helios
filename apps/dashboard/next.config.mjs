@@ -12,7 +12,7 @@ const nextConfig = {
   reactStrictMode: true,
   // Lets the e2e suite run a second dev server (dead backend) next to the first one.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
-  transpilePackages: ["@arco/schemas"],
+  transpilePackages: ["@arco/schemas", "@arco/mobile"],
   eslint: { ignoreDuringBuilds: true }, // the workspace root runs ESLint (flat config)
   async rewrites() {
     return [

@@ -209,6 +209,29 @@ record-replay: ## Re-record the offline fallback (apps/dashboard/public/recorded
 	$(PNPM) --filter @arco/dashboard record-replay
 
 # ---------------------------------------------------------------------------
+# Mobile + mesh (Phase 9)
+# ---------------------------------------------------------------------------
+.PHONY: test-mobile
+test-mobile: ## 9.1 Mobile core tests: Ed25519 signing (Python cross-check), CRDT convergence under loss, partition-and-heal, relay, on-device reroute
+	$(PNPM) --filter @arco/mobile test
+
+.PHONY: mesh-relay
+mesh-relay: ## Local WebSocket relay for WebSocketRelayTransport on $$MESH_RELAY_PORT (default 8787)
+	$(PNPM) --filter @arco/mobile relay
+
+.PHONY: dev-mobile
+dev-mobile: ## Expo dev server for the community arrow app (scan the QR with Expo Go)
+	$(PNPM) --filter @arco/mobile start
+
+.PHONY: bundle-mobile
+bundle-mobile: ## Metro production bundle (iOS) into apps/mobile/.expo-export — proves the app compiles without a device
+	$(PNPM) --filter @arco/mobile exec expo export --platform ios --output-dir .expo-export
+
+.PHONY: export-tile
+export-tile: ## Rebuild apps/mobile/assets/tiles/<scenario>.json (offline routing tile) from the scenario's OSM road graph
+	$(UV) run python scripts/export_graph_tile.py --scenario $(or $(SCENARIO),lahaina_2023)
+
+# ---------------------------------------------------------------------------
 # Agents service (host side)
 # ---------------------------------------------------------------------------
 .PHONY: serve-agents

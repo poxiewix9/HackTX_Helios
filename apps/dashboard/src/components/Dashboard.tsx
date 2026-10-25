@@ -7,20 +7,25 @@ import type { HazardClass } from "@arco/schemas";
 
 import { AgentPanel } from "@/components/AgentPanel";
 import { ControlBar, useChaosPlacement } from "@/components/ControlBar";
+import type { MapViewProps } from "@/components/map/MapView";
+import { MeshPanel } from "@/components/mesh/MeshPanel";
 import { StatusBar } from "@/components/StatusBar";
 import { StreetFeed } from "@/components/StreetFeed";
 import { TelemetryStrip } from "@/components/TelemetryStrip";
 import { useLiveFeeds } from "@/hooks/useLiveFeeds";
 
 // MapLibre / deck.gl / three touch WebGL: client-only.
-const MapView = dynamic(() => import("@/components/map/MapView").then((m) => m.MapView), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center font-mono text-xs text-ops-dim">
-      loading map…
-    </div>
-  ),
-});
+const MapView = dynamic<MapViewProps>(
+  () => import("@/components/map/MapView").then((m) => m.MapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center font-mono text-xs text-ops-dim">
+        loading map…
+      </div>
+    ),
+  },
+);
 
 export function Dashboard() {
   useLiveFeeds(true);
@@ -70,9 +75,13 @@ export function Dashboard() {
           {!presentation && <TelemetryStrip />}
         </div>
         {!presentation && (
-          <div className="grid min-h-0 gap-1" style={{ gridTemplateRows: "16rem minmax(0,1fr)" }}>
+          <div
+            className="grid min-h-0 gap-1"
+            style={{ gridTemplateRows: "15rem minmax(0,1fr) 21rem" }}
+          >
             <StreetFeed />
             <AgentPanel />
+            <MeshPanel />
           </div>
         )}
       </div>

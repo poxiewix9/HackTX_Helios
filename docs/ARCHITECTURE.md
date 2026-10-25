@@ -134,8 +134,9 @@ Pydantic models (python/arco_schemas/*.py)
 | 5     | Benchmark harness: A vs B on identical frames, JSON/CSV, hardware from the machine, recorded replay | **done** (see "Benchmark internals") |
 | 6     | Consensus agent: signed community reports, trust ledger, ST-DBSCAN, vision-negative override, disputes | **done** (see "Consensus internals") |
 | 7     | Simulator: scenario player (clock, seek, chaos), Lahaina / Joplin / Camp Fire scenarios on real OSM geometry, synthetic street feeds | **done** (see "Simulator internals") |
-| 8     | Dashboard: MapLibre + deck.gl + three.js, snap animation, telemetry strip, agent reasoning, offline recorded replay | **built, in review** (see "Dashboard internals") |
-| 9-10  | see `PROJECT_SPEC.md` §8                | pending     |
+| 8     | Dashboard: MapLibre + deck.gl + three.js, snap animation, telemetry strip, agent reasoning, offline recorded replay | **done** (see "Dashboard internals") |
+| 9     | Mobile: Expo arrow UI, signed pins, yjs CRDT mesh over `Transport` seam (simulated mesh + WebSocket relay), on-device fallback router, dashboard mesh panel (R3F) | **built, in review** (see "Mobile + mesh internals") |
+| 10    | see `PROJECT_SPEC.md` §8                | pending     |
 
 ## Blackboard internals (Phase 2)
 
@@ -408,13 +409,64 @@ ws://base-station:8002/ws/detections┘        (exp backoff + jitter,     (pure 
 - **Honesty labels**: `SIMULATION_LABEL` from the schema package sits in the status bar;
   the telemetry strip reads `LIVE`/`RECORDED` from the `telemetry.sample.mode` field of
   each sample (never from the UI mode alone).
-- **Tests**: vitest (20) for the reducer, backoff/reconnect state machine, replay
+- **Tests**: vitest (22) for the reducer, backoff/reconnect state machine, replay
   ordering/looping, layer colour/width math and the components; Playwright (3) with two
   dev servers — one against the compose stack (play Lahaina at 200×, assert
   `hazard.applied` → snap count increases and the indicator passes firing → fired, the
   clock advanced, telemetry badge, street-feed frame, measured FPS annotated), one with
   every URL pointed at a dead port (`RECORDED REPLAY` badge, agent events and snaps from
   the recording, controls disabled, reconnect counter climbing, no page errors).
+
+## Mobile + mesh internals (Phase 9)
+
+`apps/mobile` is an Expo SDK 58 app whose logic lives in `src/core` as RN-free
+TypeScript (`@arco/mobile/core`), so the same code is unit-tested in Node and runs
+inside the dashboard's "Community mesh" panel. Full detail and the honest BLE/Wi-Fi
+Direct story are in `apps/mobile/README.md`.
+
+- **`Transport` is the only seam** (`transport.ts`): `send/broadcast/onMessage/onPeers`
+  over opaque bytes. Implementations: `SimulatedMeshTransport` (in-memory network with
+  range, loss, latency, per-device cellular, partition/heal — labelled simulated),
+  `WebSocketRelayTransport` (real; rooms on `scripts/relay-server.mjs`, 1-byte id-length
+  frames, exponential-backoff reconnect) and `BleTransport` / `WifiDirectTransport`
+  stubs whose `availability()` returns the reason they cannot run in this build.
+- **Signing** (`signing.ts`): Ed25519 over the same canonical JSON as
+  `arco_agents.reports` (sorted keys, 6-dp lon/lat, ISO-ms `created_at`, nulls for absent
+  fields); `reporter_hash = sha256(pubkey)`. The TS signer is checked byte-for-byte
+  against Python-produced fixtures.
+- **CRDT** (`crdt.ts`, yjs): maps `pins`, `routes`, `uploaded`. `addPin` and
+  `applyUpdate` verify every signature; unverifiable pins are quarantined in `rejected`
+  and never forwarded. Routes merge by `(graph_version, version)` last-writer-wins.
+- **Sync** (`sync.ts`): tag byte `0x01` state vector / `0x02` update; state vectors are
+  gossiped to `fanout` random peers on a timer and on peer change; updates are
+  flood-forwarded only when they changed local state, which is what makes convergence
+  under 35 % loss and partition-and-heal pass without a message storm.
+- **Uplink** (`uplink.ts`): the gateway (any node with cellular) POSTs pending pins to
+  `POST /reports?scenario_t=`, marks them uploaded in the CRDT (so no other node uploads
+  them again), treats 409 as success.
+- **On-device fallback** (`router.ts`): A\* over `assets/tiles/<scenario>.json`
+  (`arco.tile/1`, exported from the scenario OSM graph by `scripts/export_graph_tile.py`);
+  hazard pins sever edges within 40 m and ×4 edges within 120 m. `MeshNode.activeRoute()`
+  returns the Navigator route from the CRDT when one exists for the phone's crowd group,
+  otherwise the fallback — with `source` set so the UI never labels it as the Navigator's.
+- **Guidance** (`guidance.ts`): snap to polyline, bearing, turn classification, arrival
+  (25 m) and off-route (60 m) thresholds; the phone shows an arrow rotated by
+  `arrowDeg` relative to its (simulated) heading, speaks and vibrates on turn change.
+- **Dashboard panel** (`apps/dashboard/src/components/mesh`): `MeshDemo` builds a
+  `SimulatedMeshNetwork` with a gateway, three phones in range, a bridge and two phones
+  only reachable through it; the gateway owns an `Uplink` to the real blackboard and,
+  when `NEXT_PUBLIC_MESH_RELAY_WS` is set, a `WebSocketRelayTransport` so real phones on
+  `make mesh-relay` join the same CRDT. Rendered with React Three Fiber + drei (device
+  spheres coloured by `cell | mesh | isolated`, dashed red links while partitioned,
+  propagation flash). Controls: cellular, partition/heal, loss slider, drop pin on the
+  selected phone. Routes from the store enter the mesh through the gateway.
+- **Tests**: mobile vitest (30) — signing vs Python fixtures, merge/forgery quarantine,
+  route LWW, 3-hop delivery with cellular off, 35 % loss convergence, partition-and-heal,
+  late joiner, real relay process, A\* reroute around a pin on the real Lahaina tile,
+  uplink once/409/retry, walker; dashboard vitest (2 more) for `MeshDemo`; Playwright
+  live test: pin on `phone-5` with cellular off reaches the gateway over the mesh, is not
+  uploaded, then uploads exactly once when cellular returns and a `report.*` consensus
+  event appears in the agent feed.
 
 ## Limitations (honest list, kept current)
 
@@ -445,9 +497,17 @@ ws://base-station:8002/ws/detections┘        (exp backoff + jitter,     (pure 
   there, and its packet is larger than a JPEG at the chosen cut.
 - **Benchmark `network` stage is 0.** Both pipelines run in one process; link latency is
   measured by the live base-station telemetry, not by the harness.
-- **Mesh transports.** iOS restricts background BLE advertising and does not expose
-  Wi-Fi Direct; `BleTransport` / `WifiDirectTransport` are best-effort. The demo uses
-  `SimulatedMeshTransport`, which is clearly labelled.
+- **Mesh radios are stubs.** `BleTransport` / `WifiDirectTransport` report
+  `available: false` with the reason (Expo Go has no BLE; `react-native-ble-plx` is
+  central-only; iOS strips custom UUIDs from background advertisements; Wi-Fi Direct is
+  Android-only). The mesh is real over the WebSocket relay (a Wi-Fi hop, not cellular) and
+  in `SimulatedMeshTransport`, which is labelled simulated everywhere it appears.
+- **Phone position is simulated** (walks the active route) and the device key is held in
+  memory for the session; both are stated on screen / in `apps/mobile/README.md`.
+- **Expo SDK 58 wants Node ≥ 22.13**; on Node 20 it warns but bundles (`make bundle-mobile`).
+- **drei `Html` + React 19 strict mode** logs "Attempted to synchronously unmount a root"
+  once per device label on the dev double-mount; it is a dev-only warning (no page error,
+  e2e asserts none).
 - **SLM is optional.** Route text falls back to deterministic templates when Ollama /
   llama.cpp is unavailable; speculative decoding depends on the runtime supporting it.
 - **Current-day OSM geometry.** The Lahaina sample is a present-day OSM snapshot; roads
@@ -469,7 +529,7 @@ ws://base-station:8002/ws/detections┘        (exp backoff + jitter,     (pure 
   headless Playwright under SwiftShader software GL; the e2e test records the number it
   saw rather than asserting a target. Playwright tracing is off by default because trace
   snapshots read the WebGL canvases back on every poll and stall the page.
-- **Three.js is a raw custom layer, not React Three Fiber.** R3F/drei are planned for the
+- **The map's three.js layer is raw, not React Three Fiber.** R3F/drei are used for the
   Phase 9 mesh panel where a component tree pays off; the map layer needs the MapLibre GL
   context and its projection matrix directly.
 - **Basemap tiles need internet.** OpenFreeMap vector style and ESRI imagery are fetched

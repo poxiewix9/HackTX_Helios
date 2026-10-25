@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "ARCO Community",
+    "slug": "arco-community",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#0b0f14",
+    "splash": { "backgroundColor": "#0b0f14" },
+    "ios": { "supportsTablet": false, "bundleIdentifier": "org.arco.community" },
+    "android": { "package": "org.arco.community", "edgeToEdgeEnabled": true },
+    "web": { "bundler": "metro" },
+    "extra": {
+      "meshRelayUrl": "ws://localhost:8787",
+      "blackboardUrl": "http://localhost:8001",
+      "defaultScenario": "lahaina_2023"
+    }
+  }
+}

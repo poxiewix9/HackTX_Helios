@@ -42,7 +42,7 @@ export default tseslint.config(
   },
   {
     // Browser app: numbers/booleans in template strings are the normal way to render values.
-    files: ["apps/dashboard/**/*.{ts,tsx}"],
+    files: ["apps/dashboard/**/*.{ts,tsx}", "apps/mobile/**/*.{ts,tsx}"],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     rules: {
       "@typescript-eslint/restrict-template-expressions": [

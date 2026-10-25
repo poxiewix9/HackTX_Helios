@@ -19,10 +19,10 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 | 6.1  | agents     | 3.2        | Consensus + trust + clustering                | `make test-consensus`                             | DONE        | see log 6.1 |
 | 7.1  | simulator  | 2.2,3.2    | Scenario player + schema validation           | `make test-sim`                                   | DONE        | see log 7.1 |
 | 7.2  | simulator  | 7.1        | Lahaina, Joplin, Camp Fire scenarios          | `make validate-scenarios`                         | DONE        | see log 7.2 |
-| 8.1  | dashboard  | 1.2        | Dashboard shell against mock feed             | `make test-dashboard`                             | IN_REVIEW   | see log 8.x |
-| 8.2  | dashboard  | 8.1,7.1    | Overlays, snap animation, Three.js layers     | `make e2e-dashboard`                              | IN_REVIEW   | see log 8.x |
-| 8.3  | dashboard  | 5.1,8.2    | Telemetry strip + offline fallback            | `make e2e-dashboard`                              | IN_REVIEW   | see log 8.x |
-| 9.1  | mobile     | 1.2,6.1    | Arrow UI, CRDT, transports, simulated mesh    | `pnpm --filter mobile test`                       | TODO        |          |
+| 8.1  | dashboard  | 1.2        | Dashboard shell against mock feed             | `make test-dashboard`                             | DONE        | see log 8.x |
+| 8.2  | dashboard  | 8.1,7.1    | Overlays, snap animation, Three.js layers     | `make e2e-dashboard`                              | DONE        | see log 8.x |
+| 8.3  | dashboard  | 5.1,8.2    | Telemetry strip + offline fallback            | `make e2e-dashboard`                              | DONE        | see log 8.x |
+| 9.1  | mobile     | 1.2,6.1    | Arrow UI, CRDT, transports, simulated mesh    | `make test-mobile`                                | IN_REVIEW   | see log 9.1 |
 | 10.1 | agents     | 3.2        | SLM explanations + speculative decoding       | `make test-slm`                                   | TODO        |          |
 | 10.2 | integrator | all        | make demo end to end + final E2E              | `make demo-smoke`                                 | TODO        |          |
 
@@ -303,3 +303,33 @@ $ make lint -> ruff clean, mypy clean, eslint clean, prettier clean, tsc clean (
 $ ARCO_REQUIRE_DB=1 make test -> 159 passed (pytest) / 14 + 20 passed (vitest)
 ```
 Covers: reducer semantics (hazard upsert/resolve, edge state + flash, graph version + snap latency, clock, network, telemetry ring, agent event cap); backoff curve and reconnect state machine with fake timers; replay ordering, scheduling and looping; layer colour/width math; StatusBar/ControlBar/TelemetryStrip rendering; Playwright live scenario (snap fires after a hazard event, backend clock drives the UI, LIVE/RECORDED badge, measured FPS, street feed, pause) and backend-killed replay (RECORDED REPLAY badge + banner, agent events and snaps from the recording, controls disabled, reconnect counter climbs, no page errors). Not covered: the FPS *target* — the number is reported, not asserted, because the headless renderer is software GL.
+
+### Phase 8 gate — 2026-10-24 (Orchestrator, after Reviewer pass on 8.1–8.3)
+Reviewed: message types only from `@arco/schemas`; backend clock drives the UI (clock-t asserted from `clock.tick`); snap latency computed from backend timestamps; `LIVE`/`RECORDED` read from the telemetry sample; recorded replay goes through the same reducer and is labelled `RECORDED REPLAY`; no raw video path (street feed is the simulator's synthetic MJPEG over the LAN). Evidence re-run this session: `make test-dashboard` → 20 passed; `make e2e-dashboard` → 3 passed (1.2m); `make lint` clean; `ARCO_REQUIRE_DB=1 make test` → 159 / 14 + 20. Commit `991c492`. 8.1, 8.2, 8.3 → DONE.
+
+### 9.1 mobile — 2026-10-24 — 6 iterations
+- it1: `apps/mobile` Expo SDK 58 workspace package with `src/core` kept RN-free (`@arco/mobile/core` export) so the same code runs in Node tests and the dashboard. `Transport` seam, `SimulatedMeshNetwork` (range / loss / latency / per-device cellular / partition / heal, labelled simulated), yjs `MeshDoc` (pins, routes, uploaded) with signature verification on every merge, `MeshSync` gossip (tag byte + state vector / update, flood-forward only on state change). Ed25519 signer matching `arco_agents.reports` byte-for-byte: Python fixtures generated with `arco_agents.reports` (`tests/fixtures/signed_reports.json`); first mismatch was Pydantic's microsecond `created_at` vs ISO-ms → canonicaliser normalises to ms.
+- it2: `WebSocketRelayTransport` + `scripts/relay-server.mjs` (rooms, addressed/broadcast frames, peer lists). Relay test timed out: `wss.address()` read before `listening` with port 0 → `startRelay` awaits `listening`. Partition test saw `unreachable > 0` from frames still in flight when the partition was applied → the harness settles the network before partitioning and drains one latency hop after healing (assertion unchanged).
+- it3: on-device fallback: `scripts/export_graph_tile.py` exports `assets/tiles/lahaina_2023.json` (`arco.tile/1`, 266 nodes / 637 edges / 2 safe zones / population cells, OSM ODbL noted in the tile) from the scenario's road graph; A\* with pin severing (40 m) and penalties (120 m, ×4). Reroute test returned null when the pin sat on the single junction every path shares → pin placed at the quarter point (verified: detour 1085 m, min distance to pin 63 m). Guidance (snap, bearing, turn, arrive/off-route) + simulated walker; coarse-sampled re-anchor got stuck → exact segment projection.
+- it4: Expo app (`src/phone`: `useDevice` hook over `MeshNode`, `ArrowScreen` with connectivity badge `cell | mesh | isolated`, arrow, provenance label NAVIGATOR vs ON-DEVICE FALLBACK, pin picker, cellular toggle, radio availability reasons, `SIMULATION_LABEL · position SIMULATED`). Metro needed `isomorphic-webcrypto` for lib0; `src/app` was auto-detected as an Expo Router root → renamed `src/phone`. `expo export --platform ios` → 701 modules bundled (Node 20 warning: Expo wants ≥ 22.13). BLE / Wi-Fi Direct are stubs whose `availability()` states why (documented in `apps/mobile/README.md`).
+- it5: dashboard "Community mesh" panel (`MeshDemo` + R3F/drei): gateway with real `Uplink` to the blackboard and optional relay bridge, 3 in-range phones, a bridge and 2 phones only reachable through it; cellular / partition / loss / drop-pin controls. React 19 + R3F 9 needed a `ThreeElements` JSX augmentation. `MeshDemo` unit test: pin from an isolated phone reaches the gateway with cellular off, uploads exactly once when cellular returns (signature verified in the fake fetch).
+- it6: `make lint` failed only under ESLint (`no-unsafe-assignment` on `dynamic(() => import(MapView))`) although `tsc` passed: after the mobile install pnpm no longer hoisted `@types/react` into `.pnpm/node_modules`, so `next/dynamic`'s `import React from 'react'` resolved to an error type that `skipLibCheck` hid from tsc. Fixed by declaring `@types/react ~19.3.0` at the workspace root (single version everywhere). Next had rewritten `apps/dashboard/tsconfig.json` again (dev server) → restored. Live e2e extended with the mesh path; `mesh-stats` exposes `data-pins`/`data-uploaded`. Panel row enlarged (labels were overlapping at 15rem); verified visually in a 1800×1000 Playwright Chromium.
+```
+$ make test-mobile
+ Test Files  6 passed (6)
+      Tests  30 passed (30)
+$ make test-dashboard
+ Test Files  6 passed (6)
+      Tests  22 passed (22)
+$ make e2e-dashboard
+  ✓  1 [live] › e2e/live.spec.ts:22:1 › plays the default scenario and the snap animation fires after a hazard event (40.9s)
+  ✓  2 [live] › e2e/live.spec.ts:97:1 › mesh panel: a pin dropped on an isolated phone reaches the gateway over the mesh and uploads when cellular returns (32.8s)
+  ✓  3 [live] › e2e/live.spec.ts:143:1 › chaos button: cellular kill is reflected from the network event (21.9s)
+  ✓  4 [offline] › e2e/offline.spec.ts:8:1 › falls back to the recorded replay when the backend is unreachable (33.3s)
+  4 passed (2.9m)
+$ pnpm --filter @arco/mobile exec expo export --platform ios --output-dir .expo-export
+iOS Bundled 7903ms index.ts (701 modules)
+$ make lint -> ruff clean, mypy clean, eslint clean, prettier clean, tsc clean (shared-schemas + mobile + dashboard)
+$ ARCO_REQUIRE_DB=1 make test -> 159 passed (pytest) / 14 + 30 + 22 passed (vitest)
+```
+Covers (role EXIT): arrow UI renders from a route (ArrowScreen bound to `activeRoute()`, bundled by Metro); CRDT sync converges with packet loss (35 % loss, 3 hops); `SimulatedMeshTransport` partition-and-heal; a pin dropped on one device appears on another with cellular disabled (mesh test + live e2e); on-device fallback reroutes around a pinned hazard on the real Lahaina tile; `Transport` is the only seam; both required transports fully tested; pins are signed `CommunityReport`s verified by the Python side. Not covered: BLE / Wi-Fi Direct radios (stubs with stated reasons), real GPS (position simulated), a physical two-phone run (relay path exercised by tests, not by hardware in this session).
