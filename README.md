@@ -1,4 +1,4 @@
-# ARCO — Autonomous Relief Corridor Orchestrator
+# Helios — Autonomous Relief Corridor Orchestrator
 
 Decentralised, edge-optimised evacuation routing: satellite + street-camera hazards ->
 PostGIS blackboard -> multi-agent edge severing and crowd-dispersing routes -> dashboard
