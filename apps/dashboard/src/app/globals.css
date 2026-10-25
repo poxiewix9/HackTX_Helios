@@ -13,8 +13,8 @@ html,
 body {
   height: 100%;
   margin: 0;
-  background: #07090d;
-  color: #d6dde8;
+  background: #080b10;
+  color: #e7edf5;
   font-family:
     ui-sans-serif,
     system-ui,
@@ -26,11 +26,11 @@ body {
 }
 
 .panel {
-  @apply border border-ops-edge bg-ops-panel/90 backdrop-blur-sm;
+  @apply overflow-hidden rounded-xl border border-white/[0.08] bg-[#121820]/95 shadow-[0_10px_28px_rgba(0,0,0,0.28)];
 }
 
 .panel-title {
-  @apply flex items-center justify-between border-b border-ops-edge px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-ops-dim;
+  @apply flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-[12px] font-medium text-ops-dim;
 }
 
 .maplibregl-ctrl-attrib {

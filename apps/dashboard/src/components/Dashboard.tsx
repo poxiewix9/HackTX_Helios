@@ -58,34 +58,35 @@ export function Dashboard() {
 
   return (
     <main
-      className="flex h-screen w-screen flex-col overflow-hidden"
+      className="flex h-screen w-screen flex-col overflow-hidden bg-ops-bg"
       data-presentation={presentation}
     >
       <StatusBar />
       <div
-        className="grid min-h-0 flex-1 gap-1 p-1"
-        style={{ gridTemplateColumns: presentation ? "1fr" : "minmax(0,1fr) 26rem" }}
+        className="grid min-h-0 flex-1 gap-2 p-2"
+        style={{
+          gridTemplateColumns: presentation ? "1fr" : "minmax(0, 1.25fr) minmax(24rem, 0.95fr)",
+          gridTemplateRows: presentation ? "1fr" : "minmax(0, 1fr) minmax(13.5rem, 16rem)",
+        }}
       >
-        <div
-          className="grid min-h-0 gap-1"
-          style={{ gridTemplateRows: presentation ? "1fr" : "minmax(0,1fr) 9rem" }}
-        >
-          <div className="panel relative min-h-0 overflow-hidden">
-            <MapView
-              satellite={satellite}
-              three={three}
-              labels={labels}
-              onPick={placing ? onPick : null}
-            />
-          </div>
-          {!presentation && <TelemetryStrip />}
+        <div className="panel relative min-h-0">
+          <MapView
+            satellite={satellite}
+            three={three}
+            labels={labels}
+            onPick={placing ? onPick : null}
+          />
         </div>
+        {!presentation && <StreetFeed />}
         {!presentation && (
           <div
-            className="grid min-h-0 gap-1"
-            style={{ gridTemplateRows: "15rem minmax(0,1fr) 21rem" }}
+            className="grid min-h-0 gap-2"
+            style={{
+              gridColumn: "1 / -1",
+              gridTemplateColumns: "minmax(0, 1.35fr) minmax(15rem, 0.85fr) minmax(17rem, 0.95fr)",
+            }}
           >
-            <StreetFeed />
+            <TelemetryStrip />
             <AgentPanel />
             <MeshPanel />
           </div>

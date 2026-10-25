@@ -87,8 +87,8 @@ test("plays the default scenario and the snap animation fires after a hazard eve
     description: `${fps.toFixed(1)} fps (${(await fpsEl.getAttribute("title")) ?? ""})`,
   });
 
-  // Street camera panel is bound to the synthetic simulator feed.
-  await expect(page.getByTestId("street-feed").locator("img")).toBeVisible({ timeout: 30_000 });
+  // Street camera plays local demo footage (video), not the simulator JPEG.
+  await expect(page.getByTestId("street-feed").locator("video")).toBeVisible({ timeout: 30_000 });
 
   // Still paused: the clock did not drift on its own while we were looking around.
   await expect(page.getByTestId("play-button")).toBeVisible();

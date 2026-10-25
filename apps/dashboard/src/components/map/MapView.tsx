@@ -192,7 +192,7 @@ export function MapView({ satellite, three, labels, onPick }: MapViewProps) {
     <div className="relative h-full w-full">
       <div ref={containerRef} className="absolute inset-0" data-testid="map" />
       <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col gap-1">
-        <span className="rounded-sm border border-ops-warn/60 bg-ops-bg/80 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-ops-warn">
+        <span className="rounded-md border border-white/10 bg-black/55 px-2 py-1 font-sans text-[11px] text-ops-text/90 shadow-sm backdrop-blur-sm">
           {SIMULATION_LABEL}
         </span>
         {mapError && (

@@ -200,23 +200,26 @@ export function MeshPanel() {
   }
 
   return (
-    <div className="panel flex h-full flex-col" data-testid="mesh-panel">
-      <div className="panel-title flex items-center gap-2">
-        <span>Community mesh</span>
-        <span className="rounded-sm border border-ops-warn/60 px-1 font-mono text-[9px] uppercase tracking-wider text-ops-warn">
-          Simulated mesh
+    <div className="panel flex h-full min-h-0 flex-col" data-testid="mesh-panel">
+      <div className="panel-title">
+        <span className="flex items-center gap-2 text-ops-text">
+          Mesh
+          <span className="rounded-md border border-ops-warn/40 px-1.5 py-px font-mono text-[9px] font-normal uppercase tracking-wider text-ops-warn">
+            Simulated
+          </span>
         </span>
         <span
-          className="ml-auto font-mono text-[10px] text-ops-dim"
+          className="truncate font-mono text-[10px] font-normal text-ops-dim"
           data-testid="mesh-stats"
           data-pins={snap.totalPins}
           data-uploaded={snap.uploaded}
+          title={
+            snap.relayState
+              ? `relay ${snap.relayState}${snap.relayPeers.length ? ` (${snap.relayPeers.length} phones)` : ""}`
+              : undefined
+          }
         >
-          {snap.totalPins} pins · {snap.stats.delivered} frames · {snap.stats.dropped} lost ·{" "}
-          {snap.uploaded} uploaded
-          {snap.relayState
-            ? ` · relay ${snap.relayState}${snap.relayPeers.length ? ` (${snap.relayPeers.length} phones)` : ""}`
-            : ""}
+          {snap.totalPins} pins · {snap.stats.delivered} delivered · {snap.uploaded} uploaded
         </span>
       </div>
       <div className="relative min-h-0 flex-1" data-testid="mesh-canvas">
@@ -253,7 +256,7 @@ export function MeshPanel() {
             demo.setCellular(!snap.cellular);
           }}
         >
-          {snap.cellular ? "cellular ON" : "cellular OFF"}
+          {snap.cellular ? "Cellular on" : "Cellular off"}
         </Button>
         <Button
           size="sm"
@@ -263,7 +266,7 @@ export function MeshPanel() {
             demo.setPartition(!snap.partitioned);
           }}
         >
-          {snap.partitioned ? "heal partition" : "partition"}
+          {snap.partitioned ? "Heal split" : "Split"}
         </Button>
         <label className="flex items-center gap-1 font-mono text-[10px] text-ops-dim">
           loss
@@ -290,7 +293,7 @@ export function MeshPanel() {
               setPicker((p) => !p);
             }}
           >
-            ⚑ pin on {selected}
+            Pin {selected}
           </Button>
           {picker && (
             <div

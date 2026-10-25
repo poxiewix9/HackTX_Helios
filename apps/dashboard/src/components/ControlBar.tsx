@@ -100,9 +100,9 @@ export function ControlBar(props: ControlBarProps) {
   const duration = clock.durationS ?? scenario?.duration_s ?? 0;
 
   return (
-    <div className="flex h-11 items-center gap-2 border-t border-ops-edge bg-ops-panel px-3 font-mono text-[11px]">
+    <div className="flex h-12 shrink-0 items-center gap-2 border-t border-white/[0.06] bg-[#0d131b] px-3 font-mono text-[11px]">
       <select
-        className="h-8 rounded border border-ops-edge bg-ops-bg px-2 text-ops-text"
+        className="h-8 max-w-[16rem] rounded-md border border-white/10 bg-black/30 px-2 text-ops-text"
         value={clock.scenarioId ?? scenario?.id ?? ""}
         disabled={!live || busy !== null}
         data-testid="scenario-select"
@@ -119,55 +119,56 @@ export function ControlBar(props: ControlBarProps) {
           </option>
         ))}
       </select>
-      <Button
-        variant="accent"
-        size="sm"
-        disabled={!live || busy !== null}
-        data-testid={clock.playing ? "pause-button" : "play-button"}
-        onClick={() => {
-          run(clock.playing ? "pause" : "play", () =>
-            clock.playing ? api.sim.pause() : api.sim.play(),
-          );
-        }}
-      >
-        {clock.playing ? "❚❚ pause" : "▶ play"}
-      </Button>
-      <span className="w-14 text-right text-sm text-ops-text" data-testid="clock-t">
-        {fmtClock(t)}
-      </span>
-      <input
-        type="range"
-        min={0}
-        max={Math.max(1, duration)}
-        step={1}
-        value={Math.min(t, duration || t)}
-        disabled={!live || busy !== null}
-        className="h-1 w-56 cursor-pointer accent-[#36c4ff]"
-        data-testid="scrub"
-        onChange={(e) => {
-          run("seek", () => api.sim.seek(Number(e.target.value)));
-        }}
-      />
-      <span className="w-12 text-ops-dim">{fmtClock(duration)}</span>
-      <select
-        className="h-8 rounded border border-ops-edge bg-ops-bg px-2 text-ops-text"
-        value={String(clock.speed)}
-        disabled={!live || busy !== null}
-        data-testid="speed-select"
-        onChange={(e) => {
-          run("speed", () => api.sim.speed(Number(e.target.value)));
-        }}
-      >
-        {!SPEEDS.includes(clock.speed) && (
-          <option value={String(clock.speed)}>{clock.speed}×</option>
-        )}
-        {SPEEDS.map((s) => (
-          <option key={s} value={String(s)}>
-            {s}×
-          </option>
-        ))}
-      </select>
-      <span className="mx-1 h-5 w-px bg-ops-edge" />
+      <div className="flex h-8 items-center gap-2 rounded-md border border-white/10 bg-black/25 px-2">
+        <Button
+          variant="accent"
+          size="sm"
+          disabled={!live || busy !== null}
+          data-testid={clock.playing ? "pause-button" : "play-button"}
+          onClick={() => {
+            run(clock.playing ? "pause" : "play", () =>
+              clock.playing ? api.sim.pause() : api.sim.play(),
+            );
+          }}
+        >
+          {clock.playing ? "Pause" : "Play"}
+        </Button>
+        <span className="w-12 text-right text-sm tabular-nums text-ops-text" data-testid="clock-t">
+          {fmtClock(t)}
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={Math.max(1, duration)}
+          step={1}
+          value={Math.min(t, duration || t)}
+          disabled={!live || busy !== null}
+          className="h-1 w-40 cursor-pointer accent-[#36c4ff] sm:w-56"
+          data-testid="scrub"
+          onChange={(e) => {
+            run("seek", () => api.sim.seek(Number(e.target.value)));
+          }}
+        />
+        <span className="w-12 tabular-nums text-ops-dim">{fmtClock(duration)}</span>
+        <select
+          className="h-7 rounded-md border border-white/10 bg-black/40 px-1.5 text-ops-text"
+          value={String(clock.speed)}
+          disabled={!live || busy !== null}
+          data-testid="speed-select"
+          onChange={(e) => {
+            run("speed", () => api.sim.speed(Number(e.target.value)));
+          }}
+        >
+          {!SPEEDS.includes(clock.speed) && (
+            <option value={String(clock.speed)}>{clock.speed}×</option>
+          )}
+          {SPEEDS.map((s) => (
+            <option key={s} value={String(s)}>
+              {s}×
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="relative">
         <Button
           variant="danger"
@@ -178,11 +179,11 @@ export function ControlBar(props: ControlBarProps) {
             setChaosOpen((o) => !o);
           }}
         >
-          ⚡ chaos
+          Chaos
         </Button>
         {chaosOpen && (
-          <div className="panel absolute bottom-10 left-0 z-30 w-72 p-2" data-testid="chaos-menu">
-            <div className="panel-title mb-1">inject hazard (click the map to place)</div>
+          <div className="panel absolute bottom-12 left-0 z-30 w-72 p-2" data-testid="chaos-menu">
+            <div className="panel-title mb-1">Drop on the map</div>
             <div className="grid grid-cols-2 gap-1">
               {CHAOS_CLASSES.map((cls) => (
                 <button
@@ -206,7 +207,7 @@ export function ControlBar(props: ControlBarProps) {
                 </button>
               ))}
             </div>
-            <div className="panel-title my-1">network</div>
+            <div className="panel-title my-1">Network</div>
             <Button
               variant={cellularUp ? "danger" : "accent"}
               size="sm"
@@ -219,7 +220,7 @@ export function ControlBar(props: ControlBarProps) {
                 );
               }}
             >
-              {cellularUp ? "kill cellular" : "restore cellular"}
+              {cellularUp ? "Kill cellular" : "Restore cellular"}
             </Button>
           </div>
         )}
@@ -238,22 +239,22 @@ export function ControlBar(props: ControlBarProps) {
           </button>
         </Badge>
       )}
-      <span className="ml-auto flex items-center gap-1">
+      <span className="ml-auto flex items-center gap-1 rounded-md border border-white/10 bg-black/25 p-0.5">
         <Toggle
-          label="satellite"
+          label="Satellite"
           on={props.satellite}
           onChange={props.setSatellite}
           testId="toggle-satellite"
         />
         <Toggle label="3D" on={props.three} onChange={props.setThree} testId="toggle-three" />
         <Toggle
-          label="labels"
+          label="Labels"
           on={props.labels}
           onChange={props.setLabels}
           testId="toggle-labels"
         />
         <Toggle
-          label="present"
+          label="Present"
           on={props.presentation}
           onChange={props.setPresentation}
           testId="toggle-presentation"

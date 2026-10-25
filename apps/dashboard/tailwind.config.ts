@@ -6,15 +6,15 @@ export default {
     extend: {
       colors: {
         ops: {
-          bg: "#07090d",
-          panel: "#0d1117",
-          edge: "#1b2230",
-          text: "#d6dde8",
-          dim: "#7b879a",
+          bg: "#080b10",
+          panel: "#121820",
+          edge: "#243041",
+          text: "#e7edf5",
+          dim: "#8b97a8",
           accent: "#36c4ff",
           warn: "#ffb020",
-          danger: "#ff3b30",
-          ok: "#2fd27f",
+          danger: "#ff5d52",
+          ok: "#3ddc84",
         },
       },
       fontFamily: {

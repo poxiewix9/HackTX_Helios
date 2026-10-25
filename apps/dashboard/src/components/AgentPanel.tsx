@@ -11,6 +11,13 @@ import { useWorld } from "@/store/world";
 
 type Filter = "all" | AgentEvent["agent"];
 
+const FILTER_LABEL: Record<Filter, string> = {
+  all: "all",
+  cartographer: "map",
+  navigator: "route",
+  consensus: "vote",
+};
+
 export function AgentPanel() {
   const events = useWorld((s) => s.agentEvents);
   const [filter, setFilter] = useState<Filter>("all");
@@ -27,19 +34,21 @@ export function AgentPanel() {
   return (
     <section className="panel flex h-full min-h-0 flex-col" data-testid="agent-panel">
       <div className="panel-title">
-        <span>agent decisions · {events.length}</span>
-        <span className="flex gap-1">
+        <span className="text-ops-text">
+          Decisions <span className="font-normal text-ops-dim">{events.length}</span>
+        </span>
+        <span className="flex gap-0.5 rounded-md border border-white/10 p-0.5 font-mono text-[10px] font-normal">
           {(["all", "cartographer", "navigator", "consensus"] as Filter[]).map((f) => (
             <button
               key={f}
               type="button"
-              className={`rounded-sm px-1 ${filter === f ? "bg-ops-edge text-ops-text" : "text-ops-dim hover:text-ops-text"}`}
+              className={`rounded px-1.5 py-0.5 ${filter === f ? "bg-white/10 text-ops-text" : "text-ops-dim hover:text-ops-text"}`}
               style={f !== "all" && filter === f ? { color: AGENT_COLORS[f] } : undefined}
               onClick={() => {
                 setFilter(f);
               }}
             >
-              {f}
+              {FILTER_LABEL[f]}
             </button>
           ))}
           <button

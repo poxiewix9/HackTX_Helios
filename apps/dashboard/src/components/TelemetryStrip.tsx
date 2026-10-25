@@ -83,9 +83,12 @@ export function TelemetryStrip() {
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    const size = () => ({
+      width: Math.max(10, host.clientWidth),
+      height: Math.max(72, host.clientHeight),
+    });
     const opts: uPlot.Options = {
-      width: host.clientWidth || 600,
-      height: 84,
+      ...size(),
       cursor: { show: false },
       legend: { show: false },
       scales: {
@@ -129,7 +132,7 @@ export function TelemetryStrip() {
     const plot = new uPlot(opts, seriesData(useWorld.getState().telemetry.byPipeline), host);
     plotRef.current = plot;
     const ro = new ResizeObserver(() => {
-      plot.setSize({ width: host.clientWidth, height: 84 });
+      plot.setSize(size());
     });
     ro.observe(host);
     let raf = 0;
@@ -162,9 +165,11 @@ export function TelemetryStrip() {
   const bench = telemetry.benchmark;
 
   return (
-    <section className="panel flex h-full flex-col" data-testid="telemetry-strip">
+    <section className="panel flex h-full min-h-0 flex-col" data-testid="telemetry-strip">
       <div className="panel-title">
-        <span>telemetry · FP32 full vs INT8 split · target {TARGET_MS} ms / 30 fps</span>
+        <span className="text-ops-text">
+          Latency <span className="font-normal text-ops-dim">target {TARGET_MS} ms</span>
+        </span>
         <span className="flex items-center gap-1">
           <Badge tone={recorded ? "warn" : "ok"} data-testid="telemetry-mode">
             {last || mode === "replay" ? (recorded ? "RECORDED" : "LIVE") : "NO DATA"}
@@ -181,26 +186,26 @@ export function TelemetryStrip() {
           )}
         </span>
       </div>
-      <div className="flex flex-1 gap-2 p-2">
-        <div ref={hostRef} className="min-w-0 flex-1" data-testid="telemetry-plot" />
-        <div className="grid w-[26rem] grid-cols-1 gap-1 font-mono text-[10px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-2">
+        <div ref={hostRef} className="min-h-0 w-full flex-1" data-testid="telemetry-plot" />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px]">
           {latest.length === 0 && (
             <span className="text-ops-dim">waiting for telemetry samples…</span>
           )}
           {latest.map((s) => (
-            <div key={s.pipeline} className="flex flex-col gap-0.5">
-              <div className="flex items-center justify-between">
-                <span style={{ color: COLORS[s.pipeline] }}>{s.pipeline}</span>
-                <span className="text-ops-dim">
-                  {s.stream} ·{" "}
-                  <span className={s.total_ms > TARGET_MS ? "text-ops-danger" : "text-ops-ok"}>
-                    {fmtMs(s.total_ms, 1)}
-                  </span>{" "}
-                  · {s.fps.toFixed(1)} fps · {fmtBytes(s.bytes_sent)}/frame · drops{" "}
-                  {s.dropped_frames}
-                </span>
+            <div key={s.pipeline} className="flex min-w-[12rem] flex-1 items-center gap-2">
+              <span className="shrink-0" style={{ color: COLORS[s.pipeline] }}>
+                {s.pipeline}
+              </span>
+              <span className={s.total_ms > TARGET_MS ? "text-ops-danger" : "text-ops-ok"}>
+                {fmtMs(s.total_ms, 1)}
+              </span>
+              <span className="text-ops-dim">
+                {s.fps.toFixed(0)} fps · {fmtBytes(s.bytes_sent)}
+              </span>
+              <div className="min-w-[4rem] flex-1">
+                <StageBars sample={s} />
               </div>
-              <StageBars sample={s} />
             </div>
           ))}
           {bench && (
