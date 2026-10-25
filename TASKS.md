@@ -22,9 +22,9 @@ Tasks whose `depends_on` are not all DONE are gated; do not start them.
 | 8.1  | dashboard  | 1.2        | Dashboard shell against mock feed             | `make test-dashboard`                             | DONE        | see log 8.x |
 | 8.2  | dashboard  | 8.1,7.1    | Overlays, snap animation, Three.js layers     | `make e2e-dashboard`                              | DONE        | see log 8.x |
 | 8.3  | dashboard  | 5.1,8.2    | Telemetry strip + offline fallback            | `make e2e-dashboard`                              | DONE        | see log 8.x |
-| 9.1  | mobile     | 1.2,6.1    | Arrow UI, CRDT, transports, simulated mesh    | `make test-mobile`                                | IN_REVIEW   | see log 9.1 |
-| 10.1 | agents     | 3.2        | SLM explanations + speculative decoding       | `make test-slm`                                   | TODO        |          |
-| 10.2 | integrator | all        | make demo end to end + final E2E              | `make demo-smoke`                                 | TODO        |          |
+| 9.1  | mobile     | 1.2,6.1    | Arrow UI, CRDT, transports, simulated mesh    | `make test-mobile`                                | DONE        | see log 9.1 |
+| 10.1 | agents     | 3.2        | SLM explanations + speculative decoding       | `make test-slm`                                   | IN_REVIEW   | see log 10.1 |
+| 10.2 | integrator | all        | make demo end to end + final E2E              | `make demo-smoke`                                 | IN_REVIEW   | see log 10.2 |
 
 ## Phase gate log
 (Orchestrator appends: phase, date, gate checks run, result.)
@@ -333,3 +333,44 @@ $ make lint -> ruff clean, mypy clean, eslint clean, prettier clean, tsc clean (
 $ ARCO_REQUIRE_DB=1 make test -> 159 passed (pytest) / 14 + 30 + 22 passed (vitest)
 ```
 Covers (role EXIT): arrow UI renders from a route (ArrowScreen bound to `activeRoute()`, bundled by Metro); CRDT sync converges with packet loss (35 % loss, 3 hops); `SimulatedMeshTransport` partition-and-heal; a pin dropped on one device appears on another with cellular disabled (mesh test + live e2e); on-device fallback reroutes around a pinned hazard on the real Lahaina tile; `Transport` is the only seam; both required transports fully tested; pins are signed `CommunityReport`s verified by the Python side. Not covered: BLE / Wi-Fi Direct radios (stubs with stated reasons), real GPS (position simulated), a physical two-phone run (relay path exercised by tests, not by hardware in this session).
+
+### Phase 9 gate — 2026-10-25 (Orchestrator, after Reviewer pass on 9.1)
+Reviewed: `Transport` is the only seam; `SimulatedMeshTransport` and `WebSocketRelayTransport` are fully tested; BLE/Wi-Fi Direct are stubs with stated reasons; pins are signed `CommunityReport`s; CRDT converges under 35 % loss and partition-and-heal; a pin with cellular off reaches the gateway (unit + live e2e); on-device fallback reroutes around a pin on the real Lahaina tile; simulated pieces labelled. Evidence: `make test-mobile` 30; `make e2e-dashboard` 4; `make lint` clean. Commit `5795bf5`. 9.1 → DONE.
+
+### 10.1 SLM — 2026-10-25 — 4 iterations
+- it1: `SlmBackend` seam (`OllamaBackend` `/api/generate`, `LlamaCppBackend` `/completion`). `SlmExplainer` takes a backend; any HTTP/timeout/empty/dropped-fact/too-long rewrite falls back to `DeterministicExplainer` and is counted. Settings: `ARCO_SLM_BACKEND`, `LLAMACPP_URL`, `ARCO_SLM_MAX_TOKENS`, `ARCO_SLM_SPECULATIVE_N_MAX`. `ARCO_SLM_ENABLED=false` still builds no client.
+- it2: fact guard (`required_facts` = first-three-leg names + distances + destination; `MAX_WORDS=60`). Prompt requires those strings verbatim. `SlmStats` snapshot + `CachedExplainer.flat_stats()` for `AgentEvent.data` (scalar `slm_*` keys). `/health` exposes `slm_backend`, `slm_model`, `explainer`.
+- it3: speculative decoding reported, never assumed. llama.cpp with `timings.draft_n` → `speculative="active"` + real acceptance; without those fields → `"not_reported"`; Ollama → `"unsupported"`. Latency is wall time around the HTTP call; tokens/s come from the runtime. `scripts/slm_bench.py` measures a real server and exits 2 with no numbers if none is up (this machine has neither Ollama nor llama.cpp).
+- it4: `make test-slm` 19: fake runtimes via `httpx.MockTransport` (exact JSON shapes), fact-guard cases, fallbacks, cache-once, integration test that the same graph + demand produces identical edge ids / length / cost with SLM on and off (GOOD rewrite is for the corridor facts, so Lahaina roads are rejected → fallback text, routes unchanged). Route tooltip shows rationale + `[deterministic text | SLM rewrite]`.
+```
+$ make test-slm
+...................                                                      [100%]
+19 passed in 1.57s
+$ uv run python scripts/slm_bench.py --n 2 --timeout 1
+no usable answer from ollama at http://localhost:11434 (ConnectError: [Errno 61] Connection refused); start the runtime first — nothing measured
+exit=2
+$ make lint -> ruff/mypy/eslint/prettier/tsc clean
+$ ARCO_REQUIRE_DB=1 make test -> 178 passed (pytest, +19 SLM) / 14 + 30 + 22 passed (vitest)
+```
+Covers (role EXIT): SLM off is fully supported; the SLM never chooses a route; every fallback is counted; speculative decoding is labelled from the runtime's own fields. Not covered: a live model measurement (no runtime on this machine).
+
+### 10.2 demo — 2026-10-25 — 4 iterations
+- it1: `tests/e2e/test_demo_smoke.py` plays Lahaina at 200× over HTTP (no mocks). First run: agents image lacked new `/health` fields → rebuilt; `network.cellular` is a bus event not an `AgentEvent` → assert on `/events`; `hazard.resolved` vs `.noop` → prefix match; dashboard check gated on `DASHBOARD_URL`.
+- it2: `scripts/demo.sh` / `make demo`: compose up → healthcheck → mesh relay + dashboard → load/seek/speed/play → open browser → follow clock → this-run agent-event summary + `GET :8004/check`. First run: empty bash array under `set -u`; `DASHBOARD_PORT` from `.env` overrode the make env (Makefile `include .env`); `:3000` held by another Python process; pipe-to-python3 JSON decode failed on a large body. Fixed: no empty arrays; `.env` fills only unset keys; auto-pick a free port if the requested one is a non-ARCO server; write events to a file.
+- it3: background dashboard/relay died when make exited. `start_bg` now `setsid`s the child; `make demo-stop` kills the process group. Re-run after Colima restart: dashboard pid 4466 and relay pid 4457 still alive, `GET :3001` → 200 ARCO.
+- it4: `?present=1` opens presentation mode; Makefile `demo` / `demo-stop` / `demo-smoke`; ARCHITECTURE "SLM + demo internals"; README quick start.
+```
+$ DEMO_OPEN=0 DEMO_SPEED=120 make demo
+   t=  1800/1800.0 s  timeline 13/13  routes 3  graph v1287
+   agent events: {'cartographer': 21, 'navigator': 10, 'consensus': 5}
+      10  hazard.applied
+       1  community.hazard.created
+      10  routes.recomputed
+   expected blocked edges: OK (209 severed)
+   agents: routes=3 graph_version=1288 slm_enabled=False consensus_reports_seen=5 errors=[]
+   dashboard: http://localhost:3001/   (pids still alive after make exit; GET 200)
+$ DASHBOARD_URL=http://localhost:3001 make demo-smoke
+.........                                                                [100%]
+9 passed in 17.83s
+```
+Covers (role EXIT): `make demo` runs the full Lahaina scenario with no manual steps; smoke asserts agent events with reasoning, route text, expected blocked edges, signed reports through consensus, cellular-down + clock on the bus, no raw-video path, dashboard HTML. Not covered: opening a GUI browser in this session (`DEMO_OPEN=0`); a live SLM rewrite (SLM off).

@@ -45,6 +45,11 @@ make e2e-dashboard      # Phase 8 Playwright: live scenario + snap (needs the st
 make test-mobile        # Phase 9 mobile core: signing (Python cross-check), CRDT under loss, partition-and-heal, relay, on-device reroute
 make mesh-relay         # Phase 9 WebSocket relay (:8787) that phones + the dashboard's simulated gateway join
 make dev-mobile         # Phase 9 Expo dev server (Expo Go); see apps/mobile/README.md for EXPO_PUBLIC_* and the BLE/Wi-Fi Direct caveats
+make test-slm           # Phase 10 SLM explanations: fact guard, fallbacks, speculative-decoding labels (no model required)
+make slm-bench          # Phase 10 measure a real local SLM (exit 2 if none is running)
+make demo               # Phase 10 full Lahaina end to end, no manual steps (compose + dashboard + play + follow)
+make demo-smoke         # Phase 10 host-side E2E against the running stack (200×)
+make demo-stop          # stop the dashboard + mesh relay started by `make demo`
 make schemas            # regenerate JSON Schema + TS types from Pydantic
 make schemas-check      # fail if generated files are stale
 ```
@@ -72,7 +77,7 @@ apps/dashboard/            Next.js 15 ops dashboard: MapLibre + deck.gl + three.
 apps/mobile/               Expo community app: arrow UI, signed pins, yjs CRDT mesh (simulated + WebSocket relay), on-device fallback router
 data/{scenarios,samples}/  Lahaina/Joplin/Camp Fire scenarios + OSM samples (ODbL) + vision georefs
 models/                    exported ONNX heads/tails + manifest.json (gitignored; make export-split)
-scripts/                   healthcheck, loop_check (agent hook), export_split.py, finetune.py
+scripts/                   healthcheck, demo.sh, slm_bench.py, export_graph_tile.py, export_split.py, finetune.py
 docs/                      ARCHITECTURE.md
 ```
 

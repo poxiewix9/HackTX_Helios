@@ -5,7 +5,7 @@ SHELL := /bin/bash
 UV      ?= uv
 PNPM    ?= pnpm
 COMPOSE ?= docker compose
-PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents services/edge-capture services/base-station services/benchmark services/simulator scripts/export_split.py scripts/finetune.py
+PY_DIRS := packages/shared-schemas/python packages/shared-schemas/tests services/blackboard services/agents services/edge-capture services/base-station services/benchmark services/simulator scripts/export_split.py scripts/finetune.py scripts/export_graph_tile.py scripts/slm_bench.py tests/e2e
 
 # Load .env if present so DATABASE_URL etc. are available to host-side commands.
 ifneq (,$(wildcard .env))
@@ -59,10 +59,11 @@ lint-py:
 	# agents separately: both services have tests/conftest.py (mypy duplicate-module)
 	$(UV) run mypy packages/shared-schemas/python services/blackboard
 	$(UV) run mypy services/agents
-	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
+	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py scripts/export_graph_tile.py scripts/slm_bench.py
 	$(UV) run mypy services/base-station
 	$(UV) run mypy services/benchmark
 	$(UV) run mypy services/simulator
+	$(UV) run mypy tests/e2e
 
 .PHONY: lint-ts
 lint-ts:
@@ -79,10 +80,11 @@ format: ## Auto-format Python and TS
 typecheck: ## mypy + tsc only
 	$(UV) run mypy packages/shared-schemas/python services/blackboard
 	$(UV) run mypy services/agents
-	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py
+	$(UV) run mypy services/edge-capture scripts/export_split.py scripts/finetune.py scripts/export_graph_tile.py scripts/slm_bench.py
 	$(UV) run mypy services/base-station
 	$(UV) run mypy services/benchmark
 	$(UV) run mypy services/simulator
+	$(UV) run mypy tests/e2e
 	$(PNPM) typecheck
 
 .PHONY: test
@@ -119,6 +121,14 @@ test-navigator: ## 3.2 Navigator: A*, dispersal, measured <1s reroute + LangGrap
 .PHONY: test-consensus
 test-consensus: ## 6.1 Consensus: signing, clustering, trust, smoke false-negative override (needs DB)
 	ARCO_REQUIRE_DB=1 $(UV) run pytest services/agents/tests/test_consensus.py -q -p no:cacheprovider
+
+.PHONY: test-slm
+test-slm: ## 10.1 SLM explanations: fact guard, fallbacks, Ollama + llama.cpp (speculative) timing parsing, route invariance (DB test skips if no DB)
+	$(UV) run pytest services/agents/tests/test_slm.py -q -p no:cacheprovider
+
+.PHONY: slm-bench
+slm-bench: ## 10.1 Measure a real local SLM runtime (exit 2 if none): SLM_BACKEND=ollama|llamacpp SLM_MODEL=... SLM_URL=...
+	$(UV) run python scripts/slm_bench.py --backend $(or $(SLM_BACKEND),ollama) --model $(or $(SLM_MODEL),qwen2.5:1.5b-instruct) $(if $(SLM_URL),--url $(SLM_URL),) --n $(or $(N),8)
 
 .PHONY: test-agents
 test-agents: ## Every agents test
@@ -207,6 +217,29 @@ e2e-dashboard: ## 8.2 Playwright: live scenario + snap animation (needs compose 
 .PHONY: record-replay
 record-replay: ## Re-record the offline fallback (apps/dashboard/public/recorded/<id>.replay.json) from the running stack after `make play-scenario`
 	$(PNPM) --filter @arco/dashboard record-replay
+
+# ---------------------------------------------------------------------------
+# Demo (Phase 10)
+# ---------------------------------------------------------------------------
+.PHONY: demo
+demo: ## Full Lahaina scenario end to end, no manual steps: compose up, healthcheck, relay + dashboard, load/play, open browser, follow the clock. DEMO_SPEED=30 DEMO_PRESENT=0 DEMO_VISION=0
+	./scripts/demo.sh
+
+.PHONY: demo-stop
+demo-stop: ## Stop the background dashboard + mesh relay started by `make demo` (containers keep running; `make down` stops them)
+	@for p in data/cache/demo/dashboard.pid data/cache/demo/relay.pid; do \
+	  if [ -f $$p ]; then \
+	    pid=$$(cat $$p); \
+	    kill -TERM -$$pid 2>/dev/null || kill $$pid 2>/dev/null || true; \
+	    rm -f $$p; \
+	    echo "stopped $$p ($$pid)"; \
+	  fi; \
+	done
+
+.PHONY: demo-smoke
+demo-smoke: ## 10.2 End-to-end smoke: bring the stack up, play Lahaina at DEMO_SMOKE_SPEED (200x) and assert agent events, routes text, blocked edges, consensus, cellular chaos, no raw-video path, dashboard (if DASHBOARD_URL)
+	$(COMPOSE) up -d --wait
+	$(UV) run pytest tests/e2e -q -p no:cacheprovider
 
 # ---------------------------------------------------------------------------
 # Mobile + mesh (Phase 9)

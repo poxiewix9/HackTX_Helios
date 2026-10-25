@@ -259,7 +259,9 @@ export function describePicked(obj: unknown): string | null {
   }
   if ("route" in obj) {
     const r = (obj as { route: Route }).route;
-    return `${r.origin_cell_id} → ${r.safe_zone_id}\n${(r.length_m / 1000).toFixed(2)} km · ${r.group_size} people\n${r.instruction}`;
+    const src = r.explanation_source === "slm" ? "SLM rewrite" : "deterministic text";
+    const why = r.rationale ? `\nwhy: ${r.rationale}` : "";
+    return `${r.origin_cell_id} → ${r.safe_zone_id}\n${(r.length_m / 1000).toFixed(2)} km · ${r.group_size} people\n${r.instruction}${why}\n[${src}]`;
   }
   if ("current_cost" in obj && "u" in obj) {
     const e = obj as RoadEdge;

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,9 +27,16 @@ class AgentsSettings(BaseSettings):
 
     # Deterministic core always runs; the SLM only explains. False must be fully supported.
     arco_slm_enabled: bool = False
+    # ollama -> OLLAMA_URL /api/generate ; llamacpp -> LLAMACPP_URL /completion (speculative
+    # decoding when the server was started with a draft model: `llama-server -m X -md Y`).
+    arco_slm_backend: Literal["ollama", "llamacpp"] = "ollama"
     ollama_url: str = "http://localhost:11434"
+    llamacpp_url: str = "http://localhost:8080"
     arco_slm_model: str = "qwen2.5:1.5b-instruct"
     arco_slm_timeout_s: float = Field(default=4.0, gt=0)
+    arco_slm_max_tokens: int = Field(default=80, ge=16, le=512)
+    # llama.cpp per-request cap on drafted tokens per step (ignored without a draft model)
+    arco_slm_speculative_n_max: int = Field(default=16, ge=0, le=64)
 
     arco_penalties_path: Path = DEFAULT_PENALTIES
     arco_routing_path: Path = DEFAULT_ROUTING

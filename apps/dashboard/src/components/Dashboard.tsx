@@ -36,6 +36,12 @@ export function Dashboard() {
   const [placing, setPlacing] = useState<HazardClass | null>(null);
   const onPick = useChaosPlacement(placing, setPlacing);
 
+  // `?present=1` opens straight into presentation mode (used by `make demo`).
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("present") === "1") setPresentation(true);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "p" && (e.metaKey || e.ctrlKey)) {

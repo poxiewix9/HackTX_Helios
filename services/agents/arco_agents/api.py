@@ -41,6 +41,9 @@ class HealthResponse(BaseModel):
     version: str
     bus_mode: str
     slm_enabled: bool
+    slm_backend: str | None
+    slm_model: str | None
+    explainer: dict[str, object]
     graph_version: int | None
     graph_nodes: int | None
     graph_edges: int | None
@@ -90,6 +93,9 @@ def create_app(settings: AgentsSettings | None = None) -> FastAPI:
             version=__version__,
             bus_mode=rt.bus_mode,
             slm_enabled=rt.settings.arco_slm_enabled,
+            slm_backend=rt.settings.arco_slm_backend if rt.settings.arco_slm_enabled else None,
+            slm_model=rt.settings.arco_slm_model if rt.settings.arco_slm_enabled else None,
+            explainer=rt.navigator.explainer.stats(),
             graph_version=g.version if g else None,
             graph_nodes=g.node_count if g else None,
             graph_edges=g.edge_count if g else None,

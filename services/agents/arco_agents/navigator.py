@@ -258,6 +258,7 @@ class Navigator:
                 "graph_version": result.graph_version,
                 "unreachable_cells": len(result.unreachable_cells),
                 "explainer_cache_hits": self.explainer.hits,
+                **self.explainer.flat_stats(),
             },
         )
         self.service.append_agent_event(ev)

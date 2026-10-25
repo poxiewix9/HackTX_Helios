@@ -135,8 +135,8 @@ Pydantic models (python/arco_schemas/*.py)
 | 6     | Consensus agent: signed community reports, trust ledger, ST-DBSCAN, vision-negative override, disputes | **done** (see "Consensus internals") |
 | 7     | Simulator: scenario player (clock, seek, chaos), Lahaina / Joplin / Camp Fire scenarios on real OSM geometry, synthetic street feeds | **done** (see "Simulator internals") |
 | 8     | Dashboard: MapLibre + deck.gl + three.js, snap animation, telemetry strip, agent reasoning, offline recorded replay | **done** (see "Dashboard internals") |
-| 9     | Mobile: Expo arrow UI, signed pins, yjs CRDT mesh over `Transport` seam (simulated mesh + WebSocket relay), on-device fallback router, dashboard mesh panel (R3F) | **built, in review** (see "Mobile + mesh internals") |
-| 10    | see `PROJECT_SPEC.md` §8                | pending     |
+| 9     | Mobile: Expo arrow UI, signed pins, yjs CRDT mesh over `Transport` seam (simulated mesh + WebSocket relay), on-device fallback router, dashboard mesh panel (R3F) | **done** (see "Mobile + mesh internals") |
+| 10    | SLM explanations (Ollama + llama.cpp, honest speculative-decoding report), presentation mode, `make demo` / `make demo-smoke` | **built, in review** (see "SLM + demo internals") |
 
 ## Blackboard internals (Phase 2)
 
@@ -191,15 +191,17 @@ Pydantic models (python/arco_schemas/*.py)
   per group). `compute_ms` is measured with `perf_counter`, never estimated; routes
   carry `graph_version`; edge loads are written back for the dashboard.
 - **Explanations**: `Explainer` protocol. `DeterministicExplainer` builds the instruction
-  from road names/bearings; `SlmExplainer` (Ollama) is used only when
+  from road names/bearings; `SlmExplainer` (Ollama or llama.cpp) is used only when
   `ARCO_SLM_ENABLED=true` and falls back to the template on timeout, error, or if the
-  text drops a road name; `CachedExplainer` keys on a route hash so unchanged routes
-  cost nothing. `explanation_source` on each `Route` says which produced the text.
+  fact guard rejects the rewrite (dropped road name, distance or destination, or too
+  long); `CachedExplainer` keys on a route hash so unchanged routes cost nothing.
+  `explanation_source` on each `Route` says which produced the text. See "SLM + demo
+  internals (Phase 10)" for backends and speculative-decoding reporting.
 - **Runtime** (`arco_agents.runner`): subscribes to `hazard|graph|edge|clock`, ticks
   every `ARCO_AGENTS_TICK_S` (TTL expiry + regrow of hazards whose buffer still grows),
   loads population/safe zones from `ARCO_POPULATION_PATH` or `POST /navigator/population`.
-  API on :8003 (`/health` reports graph version, routes, `last_compute_ms`, errors;
-  `/ws/routes` streams `routes.updated` + `agent.event`).
+  API on :8003 (`/health` reports graph version, routes, `last_compute_ms`, explainer
+  cache + SLM stats, errors; `/ws/routes` streams `routes.updated` + `agent.event`).
 - **Test isolation**: suites run in `<db>_test` with Redis channel prefix
   `blackboard-test.` (Redis Pub/Sub is server-wide, so a prefix — not the logical DB
   index — is what isolates the live `agents` container from test events).
@@ -468,6 +470,50 @@ Direct story are in `apps/mobile/README.md`.
   uploaded, then uploads exactly once when cellular returns and a `report.*` consensus
   event appears in the agent feed.
 
+## SLM + demo internals (Phase 10)
+
+The SLM never chooses a route. Pathfinding is A* / Frank–Wolfe either way;
+`ARCO_SLM_ENABLED=false` is the default and is fully tested. When enabled the
+`SlmExplainer` rewrites the deterministic instruction and any problem (disabled,
+unreachable, timeout, HTTP error, empty output, dropped fact, too long) falls back to
+the template and is counted in `SlmStats`.
+
+- **Backends** (`explain.py`): `OllamaBackend` (`POST /api/generate`, greedy,
+  `temperature=0`) and `LlamaCppBackend` (`POST /completion`, `cache_prompt`,
+  `speculative.n_max`). Chosen by `ARCO_SLM_BACKEND`. The URL comes from `OLLAMA_URL`
+  or `LLAMACPP_URL`.
+- **Fact guard**: a rewrite must keep every road name and distance the template
+  mentions (first three legs) plus the destination, and stay under 60 words. Failures
+  increment `rejected` and the template is used instead.
+- **Speculative decoding is reported, never assumed.** llama.cpp started with a draft
+  model (`llama-server -m target.gguf -md draft.gguf`) returns `timings.draft_n` /
+  `draft_n_accepted`; we label that `speculative="active"` and surface the real
+  acceptance rate. The same server without `-md` answers without those fields →
+  `"not_reported"`. Ollama has no speculative API → `"unsupported"`. Latency and
+  tokens/s are the runtime's own numbers plus wall time around the HTTP call.
+- **Surfacing**: `GET :8003/health` carries `slm_enabled`, `slm_backend`, `slm_model`,
+  `explainer` (cache + SLM snapshot). Each `routes.recomputed` `AgentEvent.data` has
+  flat `slm_*` scalars. The dashboard route tooltip shows the rationale and
+  `[deterministic text | SLM rewrite]`.
+- **Tests** (`make test-slm`, 19): fake Ollama / llama.cpp via `httpx.MockTransport`
+  (no invented numbers), fact-guard cases, fallbacks, cache-once, and a DB integration
+  test that the same graph + demand produces identical edge ids / lengths / costs with
+  the SLM on and off. A real runtime is measured by `make slm-bench`
+  (`scripts/slm_bench.py`); exit 2 and no numbers if nothing is listening.
+- **`make demo`** (`scripts/demo.sh`): compose up → healthcheck → mesh relay + Next
+  dashboard (new session so they survive the make process; auto-picks a free port if
+  `DASHBOARD_PORT` is taken by a non-ARCO server) → load Lahaina from t=0 → play at
+  `DEMO_SPEED` → open the browser (`?present=1` when `DEMO_PRESENT=1`) → follow the
+  clock → print this run's agent-event kinds and `GET :8004/check`. `make demo-stop`
+  kills the process groups.
+- **`make demo-smoke`** (`tests/e2e/test_demo_smoke.py`): host-side HTTP only, no
+  mocks. Plays Lahaina at 200× and asserts the simulation label, scripted hazards
+  applied with reasoning, expected blocked edges severed, routes with instruction +
+  rationale, signed reports through consensus, `network.cellular(down)` + `clock.tick`
+  on the bus, no raw-video / upload path in the blackboard OpenAPI, benchmark
+  hardware read from the machine. The dashboard check runs when `DASHBOARD_URL` is
+  set.
+
 ## Limitations (honest list, kept current)
 
 - **Dispersal is static.** Frank–Wolfe over k candidate paths with BPR congestion is a
@@ -508,8 +554,11 @@ Direct story are in `apps/mobile/README.md`.
 - **drei `Html` + React 19 strict mode** logs "Attempted to synchronously unmount a root"
   once per device label on the dev double-mount; it is a dev-only warning (no page error,
   e2e asserts none).
-- **SLM is optional.** Route text falls back to deterministic templates when Ollama /
-  llama.cpp is unavailable; speculative decoding depends on the runtime supporting it.
+- **SLM is optional and unmeasured on this machine.** No Ollama or llama.cpp is
+  installed here, so `make slm-bench` exits 2 with no numbers. Speculative decoding
+  is a llama.cpp *server* feature (draft model at start-up); the agents only report
+  what the runtime returned. When the SLM is off (the default) every route uses the
+  deterministic template.
 - **Current-day OSM geometry.** The Lahaina sample is a present-day OSM snapshot; roads
   may differ from August 2023. Scenario files state this.
 - **Local dev runtime.** On this development machine Docker runs under Colima; Compose

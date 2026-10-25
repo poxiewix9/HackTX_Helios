@@ -99,8 +99,13 @@ services:
       REDIS_URL: redis://redis:6379/0
       AGENTS_PORT: 8003
       ARCO_SLM_ENABLED: ${ARCO_SLM_ENABLED:-false}
+      ARCO_SLM_BACKEND: ${ARCO_SLM_BACKEND:-ollama}
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      LLAMACPP_URL: ${LLAMACPP_URL:-http://host.docker.internal:8080}
       ARCO_SLM_MODEL: ${ARCO_SLM_MODEL:-qwen2.5:1.5b-instruct}
+      ARCO_SLM_TIMEOUT_S: ${ARCO_SLM_TIMEOUT_S:-4}
+      ARCO_SLM_MAX_TOKENS: ${ARCO_SLM_MAX_TOKENS:-80}
+      ARCO_SLM_SPECULATIVE_N_MAX: ${ARCO_SLM_SPECULATIVE_N_MAX:-16}
       ARCO_POPULATION_PATH: /app/${ARCO_POPULATION_PATH:-data/samples/lahaina/demo_population.json}
       ARCO_LOG_LEVEL: ${ARCO_LOG_LEVEL:-INFO}
       ARCO_LOG_JSON: ${ARCO_LOG_JSON:-true}

@@ -33,8 +33,15 @@ TOPICS = {"hazard", "graph", "edge", "clock", "report"}
 
 def make_explainer(settings: AgentsSettings) -> Explainer:
     if settings.arco_slm_enabled:
+        llamacpp = settings.arco_slm_backend == "llamacpp"
+        url = settings.llamacpp_url if llamacpp else settings.ollama_url
         return SlmExplainer(
-            settings.ollama_url, settings.arco_slm_model, settings.arco_slm_timeout_s
+            url,
+            settings.arco_slm_model,
+            settings.arco_slm_timeout_s,
+            backend=settings.arco_slm_backend,
+            max_tokens=settings.arco_slm_max_tokens,
+            speculative_n_max=settings.arco_slm_speculative_n_max,
         )
     return DeterministicExplainer()
 
