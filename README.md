@@ -53,10 +53,3 @@ apps/dashboard/            Helios console (map, cameras, mesh, telemetry)
 apps/mobile/               Expo app: arrows, signed pins, offline mesh
 data/scenarios/            Lahaina, Joplin, Camp Fire
 ```
-
-## What is real, and what is labeled
-
-- Road networks and event bounds are real OpenStreetMap geometry. Hazard timing is scripted.
-- Latency numbers are from a recorded benchmark run. The dashboard badge says `LIVE` or `RECORDED`.
-- The street-camera boxes are a demo overlay on local stock footage, marked `DEMO`.
-- The phone mesh in the dashboard is simulated. Pins are still signed and only upload when the backhaul is up.
